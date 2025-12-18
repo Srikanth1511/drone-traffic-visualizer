@@ -1,7 +1,21 @@
 {
   "metadata": {
     "originLat": 33.755489,
-    "originLon": -84.401993
+    "originLon": -84.401993,
+    "corridors": [
+      {
+        "id": "TEST_LOOP",
+        "type": "standard",
+        "width": 50,
+        "points": [
+          [-50, -50, 330],
+          [50, -50, 330],
+          [50, 50, 330],
+          [-50, 50, 330],
+          [-50, -50, 330]
+        ]
+      }
+    ]
   },
   "timesteps": [
     {

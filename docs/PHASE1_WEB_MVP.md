@@ -7,13 +7,13 @@ This document summarizes the initial milestone for the Drone Traffic Visualizer.
 - Play back simulation exports produced by `drone-traffic-simulator` using the `/telemetry` endpoint.
 - Show drone markers with heading, ID, speed, and battery; clicking opens an inspector with MSL/AGL altitudes.
 - Overlay FAA UAS Facility Map ceilings and warn when a drone exceeds the permitted AGL ceiling.
-- Provide layer toggles for drones, trails (placeholder), corridors, and facility grids.
+- Provide layer toggles for drones, trails (placeholder), corridors, and facility grids (corridor toggle wired in the React viewer).
 - Include a scrubber with play/pause and speed controls (front-end stub provided).
 
 ## Directory alignment
 - `src/adapters/playback.py`: Reads simulator JSON, converts ENU to lat/lon, normalizes telemetry.
 - `src/services/altitude_service.py`: Handles MSL→AGL conversion and facility ceiling lookup.
-- `src/server/main.py`: FastAPI surface for health, facility ceiling probe, and telemetry playback.
+- `src/server/main.py`: FastAPI surface for status/health, facility ceiling probe, telemetry playback, and corridor overlays.
 - `src/web`: Vite/React scaffold to wire into the API.
 - `scenarios/`: Venue presets with bounds, facility map cache references, and deterministic patrols.
 

@@ -55,7 +55,7 @@ function ScenarioPicker({ scenarios, selectedId, onSelect }) {
   )
 }
 
-function LayerToggles({ showFacility, setShowFacility, showDrones, setShowDrones }) {
+function LayerToggles({ showFacility, setShowFacility, showDrones, setShowDrones, showCorridors, setShowCorridors }) {
   return (
     <div className="panel">
       <div className="panel-header">
@@ -68,6 +68,12 @@ function LayerToggles({ showFacility, setShowFacility, showDrones, setShowDrones
         <label>
           <input type="checkbox" checked={showDrones} onChange={(e) => setShowDrones(e.target.checked)} />
           Drones + headings
+        </label>
+      </div>
+      <div className="toggle-row">
+        <label>
+          <input type="checkbox" checked={showCorridors} onChange={(e) => setShowCorridors(e.target.checked)} />
+          Corridors
         </label>
       </div>
       <div className="toggle-row">
@@ -189,7 +195,7 @@ function Inspector({ selectedDrone, facilityCell }) {
   )
 }
 
-function MapView({ scenario, snapshot, facilityGrid, showFacility, showDrones, selectedDroneId, onSelectDrone }) {
+function MapView({ scenario, snapshot, facilityGrid, corridors, showFacility, showCorridors, showDrones, selectedDroneId, onSelectDrone }) {
   const center = [scenario.originLat, scenario.originLon]
 
   return (
@@ -206,6 +212,21 @@ function MapView({ scenario, snapshot, facilityGrid, showFacility, showDrones, s
           attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        {showCorridors &&
+          corridors.map((corridor) => (
+            <Polyline
+              key={corridor.id}
+              positions={corridor.path.map((p) => [p.lat, p.lon])}
+              pathOptions={{ color: '#5ac8fa', weight: Math.max(2, Math.min(8, corridor.width_m / 10)), opacity: 0.8 }}
+            >
+              <Tooltip sticky>
+                <div className="tooltip">
+                  <div className="label">{corridor.id}</div>
+                  <div className="value">{corridor.type}</div>
+                </div>
+              </Tooltip>
+            </Polyline>
+          ))}
         {showFacility &&
           facilityGrid.map((cell, idx) => (
             <Rectangle
@@ -251,6 +272,7 @@ function App() {
   const [scenarios, setScenarios] = useState([])
   const [scenarioId, setScenarioId] = useState(null)
   const [snapshots, setSnapshots] = useState([])
+  const [corridors, setCorridors] = useState([])
   const [facilityGrid, setFacilityGrid] = useState([])
   const [loading, setLoading] = useState(false)
   const [playing, setPlaying] = useState(true)
@@ -258,6 +280,7 @@ function App() {
   const [frameIndex, setFrameIndex] = useState(0)
   const [selectedDroneId, setSelectedDroneId] = useState(null)
   const [showFacility, setShowFacility] = useState(true)
+  const [showCorridors, setShowCorridors] = useState(true)
   const [showDrones, setShowDrones] = useState(true)
   const [error, setError] = useState('')
 
@@ -297,6 +320,7 @@ function App() {
         }
         const telemetryJson = await telemetryRes.json()
         const facilityJson = await facilityRes.json()
+        setCorridors(telemetryJson.corridors || [])
         setSnapshots(telemetryJson.snapshots || [])
         setFacilityGrid(facilityJson.cells || [])
         setFrameIndex(0)
@@ -342,8 +366,10 @@ function App() {
           <ScenarioPicker scenarios={scenarios} selectedId={scenarioId} onSelect={setScenarioId} />
           <LayerToggles
             showFacility={showFacility}
+            showCorridors={showCorridors}
             showDrones={showDrones}
             setShowFacility={setShowFacility}
+            setShowCorridors={setShowCorridors}
             setShowDrones={setShowDrones}
           />
           <PlaybackControls
@@ -364,7 +390,9 @@ function App() {
               scenario={scenario}
               snapshot={currentSnapshot}
               facilityGrid={facilityGrid}
+              corridors={corridors}
               showFacility={showFacility}
+              showCorridors={showCorridors}
               showDrones={showDrones}
               selectedDroneId={selectedDroneId}
               onSelectDrone={setSelectedDroneId}

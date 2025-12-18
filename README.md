@@ -32,13 +32,13 @@ data/facility_maps/  # Cached facility grid samples for testing
    cd src/web && npm install && npm run dev
    ```
 
-The server exposes a health check (`/health`), a simple facility ceiling probe (`/facility-ceiling`), a facility grid stream (`/facility-grid`), scenario presets (`/scenarios`), and a telemetry playback endpoint that reads simulation JSON files. See `docs/PHASE1_WEB_MVP.md` for MVP details and `docs/FAA_RULES.md` for a quick reference on FAA constraints.
+The server exposes a readiness/status probe (`/status`, with `/health` as an alias), a simple facility ceiling probe (`/facility-ceiling`), a facility grid stream (`/facility-grid`), scenario presets (`/scenarios`), and a telemetry playback endpoint that reads simulation JSON files (including corridor overlays for the Phase 1 map view). See `docs/PHASE1_WEB_MVP.md` for MVP details and `docs/FAA_RULES.md` for a quick reference on FAA constraints.
 
 ## Relation to `drone-traffic-simulator`
 The simulator remains the source of truth for generating state logs and corridor networks. Use its `export_simulation_data` helper to produce a JSON bundle, then point this visualizer to the resulting file via the playback adapter. No changes to the simulator are required.
 
 ## Front-end (AirLoom-inspired map UI)
-- Vite + React + React-Leaflet render an interactive OSM map with FAA facility grid overlays and heading-aware drone icons.
+- Vite + React + React-Leaflet render an interactive OSM map with FAA facility grid overlays, corridor polylines, and heading-aware drone icons.
 - Scenario presets are listed from `/scenarios` and include cached facility grid paths plus playback exports stored in `data/playback/`.
 - The bottom transport bar supports play/pause, speed control, and scrubbing between telemetry snapshots from `/telemetry`.
 - The right-hand inspector mirrors the MVP requirement: per-drone lat/lon, MSL/AGL altitudes, heading, speed, battery, and a violation pill when above the facility ceiling from `/facility-grid`.

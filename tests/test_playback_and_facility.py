@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from src.adapters.playback import load_playback, snapshot_stream_to_list
+from src.adapters.playback import load_playback, load_playback_bundle, snapshot_stream_to_list
 from src.scenarios.loader import load_scenario
 from src.services.altitude_service import AltitudeService
 
@@ -25,6 +25,16 @@ def test_facility_map_ceiling_lookup():
     ceiling = altitude.facility_ceiling(33.7555, -84.4019)
     assert ceiling is not None
     assert ceiling > 0
+
+
+def test_corridor_overlay_normalization():
+    altitude = AltitudeService("data/facility_maps/benz_grid.json")
+    bundle = load_playback_bundle("tests/data/test_simulation.json", altitude)
+
+    assert bundle.corridors, "corridors should be lifted from the playback metadata"
+    first = bundle.corridors[0]
+    assert first.path, "corridor path should be georeferenced"
+    assert all(point.lat and point.lon for point in first.path)
 
 
 def test_scenario_loader_counts():
