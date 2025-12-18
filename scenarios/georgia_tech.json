@@ -1,0 +1,22 @@
+{
+  "name": "Georgia_Tech_Overhead_Playback",
+  "originLat": 33.7736,
+  "originLon": -84.4022,
+  "bounds": {"min": [-2000, -2000, 0], "max": [2000, 2000, 200]},
+  "facilityMapCache": "data/facility_maps/gt_grid.json",
+  "drones": [
+    {
+      "id": "GT_PATROL_1",
+      "path": [[-500, -500, 50], [500, -500, 50], [500, 500, 50], [-500, 500, 50], [-500, -500, 50]],
+      "speed": 10.0,
+      "payload": {"cameraStreams": ["test_video.mp4"]}
+    },
+    {
+      "id": "GT_PATROL_2",
+      "path": [[-800, 0, 70], [0, 800, 70], [800, 0, 70], [0, -800, 70], [-800, 0, 70]],
+      "speed": 11.0,
+      "payload": {"cameraStreams": ["test_video.mp4"]}
+    }
+  ],
+  "timeline": {"loop": true, "duration": 480}
+}

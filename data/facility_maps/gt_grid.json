@@ -1,0 +1,16 @@
+{
+  "cells": [
+    {
+      "latRange": [33.77, 33.78],
+      "lonRange": [-84.41, -84.39],
+      "ground": 300.0,
+      "maxAltitudeAgl": 122.0
+    },
+    {
+      "latRange": [33.78, 33.79],
+      "lonRange": [-84.41, -84.39],
+      "ground": 295.0,
+      "maxAltitudeAgl": 80.0
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+[project]
+name = "drone-traffic-visualizer"
+version = "0.1.0"
+description = "Standalone visualization console for drone traffic simulations."
+authors = [{name = "Drone Traffic Team"}]
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi~=0.111.0",
+    "uvicorn~=0.30.0",
+    "pydantic~=2.8.0",
+    "python-dotenv~=1.0.1",
+    "httpx~=0.27.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest~=8.2.0", "pytest-asyncio~=0.23.0"]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-q"
