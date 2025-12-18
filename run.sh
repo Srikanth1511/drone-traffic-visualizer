@@ -22,6 +22,13 @@ pip install -e ".[dev]"
 if [ "${1:-}" = "--serve" ]; then
   echo "[run] Starting FastAPI dev server at http://localhost:8000"
   uvicorn src.server.main:app --reload
+elif [ "${1:-}" = "--web" ]; then
+  pushd src/web >/dev/null
+  echo "[web] Installing UI dependencies"
+  npm install
+  echo "[web] Starting Vite dev server on http://localhost:5173 (proxy to FastAPI recommended)"
+  npm run dev -- --host --port 5173
+  popd >/dev/null
 else
   echo "[test] Running pytest suite"
   pytest

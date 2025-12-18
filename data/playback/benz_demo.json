@@ -1,0 +1,36 @@
+{
+  "metadata": {
+    "originLat": 33.755489,
+    "originLon": -84.401993
+  },
+  "timesteps": [
+    {
+      "time": 0,
+      "drones": {
+        "PATROL_1": {"x": -400, "y": -350, "z": 330, "heading": 45, "speed": 12.0, "payload": {"battery": 0.95}},
+        "PATROL_2": {"x": 250, "y": 400, "z": 360, "heading": 190, "speed": 14.0, "payload": {"battery": 0.92}}
+      }
+    },
+    {
+      "time": 5,
+      "drones": {
+        "PATROL_1": {"x": 100, "y": -350, "z": 332, "heading": 90, "speed": 12.0, "payload": {"battery": 0.94}},
+        "PATROL_2": {"x": 250, "y": -100, "z": 365, "heading": 230, "speed": 14.0, "payload": {"battery": 0.91}}
+      }
+    },
+    {
+      "time": 10,
+      "drones": {
+        "PATROL_1": {"x": 350, "y": 200, "z": 334, "heading": 140, "speed": 12.0, "payload": {"battery": 0.93}},
+        "PATROL_2": {"x": -100, "y": -200, "z": 368, "heading": 300, "speed": 14.0, "payload": {"battery": 0.90}}
+      }
+    },
+    {
+      "time": 15,
+      "drones": {
+        "PATROL_1": {"x": -250, "y": 450, "z": 336, "heading": 210, "speed": 12.0, "payload": {"battery": 0.92}},
+        "PATROL_2": {"x": -350, "y": 100, "z": 370, "heading": 350, "speed": 14.0, "payload": {"battery": 0.89}}
+      }
+    }
+  ]
+}

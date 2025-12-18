@@ -1,0 +1,36 @@
+{
+  "metadata": {
+    "originLat": 33.7736,
+    "originLon": -84.4022
+  },
+  "timesteps": [
+    {
+      "time": 0,
+      "drones": {
+        "GT_PATROL": {"x": -200, "y": -200, "z": 318, "heading": 30, "speed": 10.0, "payload": {"battery": 0.96}},
+        "GT_SWEEP": {"x": 300, "y": -50, "z": 325, "heading": 120, "speed": 11.5, "payload": {"battery": 0.94}}
+      }
+    },
+    {
+      "time": 6,
+      "drones": {
+        "GT_PATROL": {"x": 80, "y": -250, "z": 320, "heading": 75, "speed": 10.0, "payload": {"battery": 0.95}},
+        "GT_SWEEP": {"x": 300, "y": 200, "z": 330, "heading": 175, "speed": 11.5, "payload": {"battery": 0.93}}
+      }
+    },
+    {
+      "time": 12,
+      "drones": {
+        "GT_PATROL": {"x": 300, "y": 50, "z": 322, "heading": 120, "speed": 10.0, "payload": {"battery": 0.94}},
+        "GT_SWEEP": {"x": 0, "y": 250, "z": 335, "heading": 240, "speed": 11.5, "payload": {"battery": 0.92}}
+      }
+    },
+    {
+      "time": 18,
+      "drones": {
+        "GT_PATROL": {"x": -250, "y": 150, "z": 323, "heading": 200, "speed": 10.0, "payload": {"battery": 0.93}},
+        "GT_SWEEP": {"x": -300, "y": -150, "z": 338, "heading": 310, "speed": 11.5, "payload": {"battery": 0.91}}
+      }
+    }
+  ]
+}

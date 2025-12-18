@@ -1,0 +1,22 @@
+[
+  {
+    "id": "benz",
+    "label": "Mercedes-Benz Stadium",
+    "originLat": 33.755489,
+    "originLon": -84.401993,
+    "radiusKm": 3.5,
+    "facilityMapCache": "data/facility_maps/benz_grid.json",
+    "playbackPath": "data/playback/benz_demo.json",
+    "color": "#7dd3fc"
+  },
+  {
+    "id": "gt",
+    "label": "Georgia Tech",
+    "originLat": 33.7736,
+    "originLon": -84.4022,
+    "radiusKm": 3.0,
+    "facilityMapCache": "data/facility_maps/gt_grid.json",
+    "playbackPath": "data/playback/gt_demo.json",
+    "color": "#f9a8d4"
+  }
+]
