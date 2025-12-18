@@ -4,17 +4,17 @@ import './ScenarioSelector.css'
 const SCENARIOS = {
   mercedes_benz: {
     name: 'Mercedes-Benz Stadium',
-    simulation_file: '/data/simulation_exports/benz_perimeter_patrol.json',
+    simulation_file: '/home/user/drone-traffic-visualizer/data/simulation_exports/benz_perimeter_patrol.json',
     origin_lat: 33.755489,
     origin_lon: -84.401993,
-    facility_map_file: '/data/facility_maps/benz_grid.json'
+    facility_map_file: '/home/user/drone-traffic-visualizer/data/facility_maps/benz_grid.json'
   },
   georgia_tech: {
     name: 'Georgia Tech Campus',
-    simulation_file: '/data/simulation_exports/gt_campus_patrol.json',
+    simulation_file: '/home/user/drone-traffic-visualizer/data/simulation_exports/gt_campus_patrol.json',
     origin_lat: 33.7736,
     origin_lon: -84.4022,
-    facility_map_file: '/data/facility_maps/gt_grid.json'
+    facility_map_file: '/home/user/drone-traffic-visualizer/data/facility_maps/gt_grid.json'
   }
 }
 
