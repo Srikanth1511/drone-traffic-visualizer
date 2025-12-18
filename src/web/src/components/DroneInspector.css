@@ -1,0 +1,75 @@
+.drone-inspector {
+  color: #fff;
+}
+
+.drone-inspector h2 {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  color: #4CAF50;
+  border-bottom: 1px solid #333;
+  padding-bottom: 10px;
+}
+
+.no-selection {
+  color: #666;
+  font-size: 14px;
+  text-align: center;
+  padding: 20px;
+}
+
+.inspector-section {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #222;
+}
+
+.inspector-section:last-child {
+  border-bottom: none;
+}
+
+.inspector-section h3 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.drone-id {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background: #222;
+  border-radius: 4px;
+}
+
+.health-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.id-text {
+  font-size: 16px;
+  font-weight: 600;
+  font-family: monospace;
+}
+
+.data-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 13px;
+  font-family: monospace;
+}
+
+.data-row .label {
+  color: #888;
+}
+
+.data-row .value {
+  color: #fff;
+  font-weight: 500;
+}
