@@ -12,9 +12,10 @@ A live drone visualization console for monitoring and managing drone traffic in 
 ### Phase 1 (MVP) - ✅ Complete
 
 - **3D Visualization**: CesiumJS-powered 3D map with OpenStreetMap buildings
-- **Drone Rendering**: Real-time drone markers with health status indicators
+- **Google Photorealistic 3D Tiles**: Optional high-fidelity 3D building rendering
+- **Drone Rendering**: Real-time drone markers with health status indicators and trails
 - **Playback Controls**: Timeline scrubber with variable speed (0.5x - 8x)
-- **Corridor Networks**: Visualize pre-planned flight corridors
+- **Corridor Networks**: Visualize pre-planned flight corridors with dual-layer paths
 - **Airspace Overlays**: FAA UAS Facility Map ceiling display
 - **Inspector Panel**: Detailed telemetry for selected drones
 - **Default Venues**: Mercedes-Benz Stadium and Georgia Tech Campus
@@ -72,6 +73,32 @@ npm run dev
 - **Frontend**: http://localhost:3000
 - **Backend API**: http://localhost:8000
 - **API Docs**: http://localhost:8000/docs
+
+### Optional: Google Photorealistic 3D Tiles
+
+For enhanced 3D building rendering with Google's photorealistic tiles:
+
+1. Get a Google Maps API key:
+   - Visit https://console.cloud.google.com/google/maps-apis
+   - Create a new project or select existing
+   - Enable **Map Tiles API** and **Maps JavaScript API**
+   - Create credentials → API Key
+   - Copy your API key
+
+2. Configure the application:
+   ```bash
+   cd src/web
+   cp .env.local.template .env.local
+   # Edit .env.local and add your API key:
+   # VITE_GOOGLE_MAPS_API_KEY=your_api_key_here
+   ```
+
+3. Enable Google 3D Tiles in the application:
+   - Start the frontend
+   - Use the **Layers** panel on the left
+   - Toggle **Google 3D Tiles** on
+
+**Note**: `.env.local` is excluded from git to protect your API keys.
 
 ## Architecture
 
@@ -194,7 +221,8 @@ Use left panel to show/hide:
 - Drones
 - Corridors
 - Facility map grid
-- Trails (Phase 2)
+- Trails
+- Google 3D Tiles (requires API key)
 
 ## Testing
 

@@ -7,7 +7,9 @@ import {
   Transforms,
   PolylineOutlineMaterialProperty,
   Math as CesiumMath,
-  Cartesian2
+  Cartesian2,
+  GoogleMaps,
+  createGooglePhotorealistic3DTileset
 } from 'cesium'
 import 'cesium/Build/Cesium/Widgets/widgets.css'
 import './CesiumViewer.css'
@@ -18,10 +20,17 @@ const CesiumViewer = ({ scenario, telemetryData, droneTrails, currentTime, layer
   const [selectedDroneId, setSelectedDroneId] = useState(null)
   const entitiesRef = useRef({})
   const corridorProgressRef = useRef({})
+  const googleTilesetRef = useRef(null)
 
   // Initialize Cesium Viewer
   useEffect(() => {
     if (!cesiumContainerRef.current || viewerRef.current) return
+
+    // Set Google Maps API key if available
+    const googleApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+    if (googleApiKey) {
+      GoogleMaps.defaultApiKey = googleApiKey
+    }
 
     const viewer = new Viewer(cesiumContainerRef.current, {
       timeline: false,
@@ -70,6 +79,33 @@ const CesiumViewer = ({ scenario, telemetryData, droneTrails, currentTime, layer
       })
     }
   }, [scenario])
+
+  // Toggle Google Photorealistic 3D Tiles
+  useEffect(() => {
+    if (!viewerRef.current) return
+
+    const viewer = viewerRef.current
+    const googleApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+
+    if (layers.googleTiles && googleApiKey) {
+      // Add Google 3D Tiles if not already added
+      if (!googleTilesetRef.current) {
+        try {
+          const tileset = createGooglePhotorealistic3DTileset()
+          viewer.scene.primitives.add(tileset)
+          googleTilesetRef.current = tileset
+        } catch (error) {
+          console.error('Error loading Google 3D Tiles:', error)
+        }
+      } else {
+        // Show existing tileset
+        googleTilesetRef.current.show = true
+      }
+    } else if (googleTilesetRef.current) {
+      // Hide Google 3D Tiles
+      googleTilesetRef.current.show = false
+    }
+  }, [layers.googleTiles])
 
   // Render corridors with full path visibility
   useEffect(() => {

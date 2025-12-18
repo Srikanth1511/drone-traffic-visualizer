@@ -19,7 +19,8 @@ function App() {
     drones: true,
     corridors: true,
     facilityMap: true,
-    trails: true // Enable trails by default
+    trails: true, // Enable trails by default
+    googleTiles: false // Google 3D tiles disabled by default (requires API key)
   })
 
   // Load scenario

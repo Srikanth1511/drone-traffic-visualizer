@@ -6,7 +6,8 @@ const LayerToggles = ({ layers, onToggle }) => {
     { key: 'drones', label: 'Drones', icon: '🚁' },
     { key: 'corridors', label: 'Corridors', icon: '🛣️' },
     { key: 'facilityMap', label: 'Facility Map', icon: '🗺️' },
-    { key: 'trails', label: 'Trails', icon: '📍' }
+    { key: 'trails', label: 'Trails', icon: '📍' },
+    { key: 'googleTiles', label: 'Google 3D Tiles', icon: '🌎' }
   ]
 
   return (
