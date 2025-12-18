@@ -1,0 +1,30 @@
+{
+  "region": "Mercedes-Benz Stadium Area",
+  "source": "FAA UAS Facility Map (Simulated for MVP)",
+  "cells": [
+    {
+      "latMin": 33.750,
+      "latMax": 33.760,
+      "lonMin": -84.410,
+      "lonMax": -84.395,
+      "maxAltitudeAgl": 121.92,
+      "description": "Mercedes-Benz Stadium vicinity - 400ft AGL ceiling"
+    },
+    {
+      "latMin": 33.760,
+      "latMax": 33.770,
+      "lonMin": -84.410,
+      "lonMax": -84.395,
+      "maxAltitudeAgl": 121.92,
+      "description": "North of stadium - 400ft AGL ceiling"
+    },
+    {
+      "latMin": 33.740,
+      "latMax": 33.750,
+      "lonMin": -84.410,
+      "lonMax": -84.395,
+      "maxAltitudeAgl": 121.92,
+      "description": "South of stadium - 400ft AGL ceiling"
+    }
+  ]
+}
