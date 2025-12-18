@@ -77,13 +77,17 @@ async def health_check():
     }
 
 
-@app.post("/api/scenario/load")
-async def load_scenario(
-    simulation_file: str,
-    origin_lat: float,
-    origin_lon: float,
+from pydantic import BaseModel
+
+class ScenarioLoadRequest(BaseModel):
+    simulation_file: str
+    origin_lat: float
+    origin_lon: float
     facility_map_file: Optional[str] = None
-):
+
+
+@app.post("/api/scenario/load")
+async def load_scenario(request: ScenarioLoadRequest):
     """
     Load a scenario for playback.
 
@@ -94,27 +98,27 @@ async def load_scenario(
         facility_map_file: Optional path to facility map cache
     """
     try:
-        sim_path = Path(simulation_file)
+        sim_path = Path(request.simulation_file)
         if not sim_path.exists():
             raise HTTPException(status_code=404, detail="Simulation file not found")
 
         # Load playback adapter
         state.playback_adapter = PlaybackAdapter(
             simulation_file=sim_path,
-            origin_lat=origin_lat,
-            origin_lon=origin_lon
+            origin_lat=request.origin_lat,
+            origin_lon=request.origin_lon
         )
 
         # Load facility map if provided
-        if facility_map_file:
-            fac_path = Path(facility_map_file)
+        if request.facility_map_file:
+            fac_path = Path(request.facility_map_file)
             if fac_path.exists():
                 state.altitude_service = AltitudeService(facility_map_file=fac_path)
 
         # Store scenario info
         state.current_scenario = {
-            "originLat": origin_lat,
-            "originLon": origin_lon,
+            "originLat": request.origin_lat,
+            "originLon": request.origin_lon,
             "duration": state.playback_adapter.get_duration(),
             "metadata": state.playback_adapter.get_metadata()
         }
