@@ -14,11 +14,12 @@ function App() {
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0)
   const [telemetryData, setTelemetryData] = useState(null)
   const [selectedDrone, setSelectedDrone] = useState(null)
+  const [droneTrails, setDroneTrails] = useState({}) // Track position history
   const [layers, setLayers] = useState({
     drones: true,
     corridors: true,
     facilityMap: true,
-    trails: false
+    trails: true // Enable trails by default
   })
 
   // Load scenario
@@ -56,6 +57,27 @@ function App() {
 
       const data = await response.json()
       setTelemetryData(data)
+
+      // Update drone trails
+      setDroneTrails((prevTrails) => {
+        const newTrails = { ...prevTrails }
+        data.drones.forEach((drone) => {
+          if (!newTrails[drone.id]) {
+            newTrails[drone.id] = []
+          }
+          newTrails[drone.id].push({
+            lat: drone.lat,
+            lon: drone.lon,
+            alt: drone.alt_msl,
+            time: data.time
+          })
+          // Keep last 500 positions
+          if (newTrails[drone.id].length > 500) {
+            newTrails[drone.id].shift()
+          }
+        })
+        return newTrails
+      })
     } catch (error) {
       console.error('Error fetching telemetry:', error)
     }
@@ -99,6 +121,7 @@ function App() {
   const handleReset = () => {
     setCurrentTime(0)
     setIsPlaying(false)
+    setDroneTrails({}) // Clear trails on reset
     fetchTelemetryFrame(0)
   }
 
@@ -126,6 +149,8 @@ function App() {
           <CesiumViewer
             scenario={scenario}
             telemetryData={telemetryData}
+            droneTrails={droneTrails}
+            currentTime={currentTime}
             layers={layers}
             onDroneSelect={setSelectedDrone}
           />

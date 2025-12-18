@@ -12,11 +12,12 @@ import {
 import 'cesium/Build/Cesium/Widgets/widgets.css'
 import './CesiumViewer.css'
 
-const CesiumViewer = ({ scenario, telemetryData, layers, onDroneSelect }) => {
+const CesiumViewer = ({ scenario, telemetryData, droneTrails, currentTime, layers, onDroneSelect }) => {
   const viewerRef = useRef(null)
   const cesiumContainerRef = useRef(null)
   const [selectedDroneId, setSelectedDroneId] = useState(null)
   const entitiesRef = useRef({})
+  const corridorProgressRef = useRef({})
 
   // Initialize Cesium Viewer
   useEffect(() => {
@@ -70,7 +71,7 @@ const CesiumViewer = ({ scenario, telemetryData, layers, onDroneSelect }) => {
     }
   }, [scenario])
 
-  // Render corridors
+  // Render corridors with full path visibility
   useEffect(() => {
     if (!scenario || !viewerRef.current) return
 
@@ -87,32 +88,47 @@ const CesiumViewer = ({ scenario, telemetryData, layers, onDroneSelect }) => {
 
     if (!layers.corridors) return
 
-    // Add new corridor entities
+    // Add new corridor entities with enhanced visibility
     scenario.corridors.forEach((corridor) => {
       const positions = corridor.centerline.map((point) =>
         Cartesian3.fromDegrees(point[1], point[0], point[2])
       )
 
-      let color = Color.CYAN
-      if (corridor.type === 'parallel') color = Color.BLUE
-      if (corridor.type === 'switching') color = Color.MAGENTA
+      let baseColor = Color.CYAN
+      if (corridor.type === 'parallel') baseColor = Color.SKYBLUE
+      if (corridor.type === 'switching') baseColor = Color.MAGENTA
 
-      const entity = entities.add({
+      // Full planned path (dimmer, shows complete route)
+      const plannedEntity = entities.add({
+        id: `corridor_planned_${corridor.id}`,
+        name: `${corridor.id} (Planned)`,
+        polyline: {
+          positions: positions,
+          width: 5,
+          material: baseColor.withAlpha(0.3),
+          clampToGround: false
+        }
+      })
+
+      entitiesRef.current[`corridor_planned_${corridor.id}`] = plannedEntity
+
+      // Active path (brighter, will show completed portions)
+      const activeEntity = entities.add({
         id: `corridor_${corridor.id}`,
         name: corridor.id,
         polyline: {
           positions: positions,
-          width: 3,
+          width: 6,
           material: new PolylineOutlineMaterialProperty({
-            color: color.withAlpha(0.6),
-            outlineWidth: 1,
-            outlineColor: Color.WHITE.withAlpha(0.3)
+            color: baseColor.withAlpha(0.8),
+            outlineWidth: 2,
+            outlineColor: Color.WHITE.withAlpha(0.5)
           }),
           clampToGround: false
         }
       })
 
-      entitiesRef.current[`corridor_${corridor.id}`] = entity
+      entitiesRef.current[`corridor_${corridor.id}`] = activeEntity
     })
   }, [scenario, layers.corridors])
 
@@ -154,13 +170,12 @@ const CesiumViewer = ({ scenario, telemetryData, layers, onDroneSelect }) => {
         position: position,
         orientation: orientation,
         droneData: drone,
-        cylinder: {
-          length: isSelected ? 8 : 6,
-          topRadius: 0,
-          bottomRadius: isSelected ? 4 : 3,
+        box: {
+          dimensions: isSelected ? new Cartesian3(10, 10, 3) : new Cartesian3(8, 8, 2.5),
           material: color,
-          outline: isSelected,
-          outlineColor: Color.WHITE
+          outline: true,
+          outlineColor: isSelected ? Color.WHITE : Color.BLACK.withAlpha(0.5),
+          outlineWidth: isSelected ? 2 : 1
         },
         label: isSelected ? {
           text: drone.id,
@@ -182,6 +197,49 @@ const CesiumViewer = ({ scenario, telemetryData, layers, onDroneSelect }) => {
       entitiesRef.current[`drone_${drone.id}`] = entity
     })
   }, [telemetryData, layers.drones, selectedDroneId])
+
+  // Render drone trails
+  useEffect(() => {
+    if (!droneTrails || !viewerRef.current || !layers.trails) return
+
+    const viewer = viewerRef.current
+    const entities = viewer.entities
+
+    // Remove old trail entities
+    Object.keys(entitiesRef.current).forEach((key) => {
+      if (key.startsWith('trail_')) {
+        entities.remove(entitiesRef.current[key])
+        delete entitiesRef.current[key]
+      }
+    })
+
+    if (!layers.trails) return
+
+    // Add trail polylines for each drone
+    Object.entries(droneTrails).forEach(([droneId, trail]) => {
+      if (trail.length < 2) return
+
+      const positions = trail.map((pos) =>
+        Cartesian3.fromDegrees(pos.lon, pos.lat, pos.alt)
+      )
+
+      // Trail color: teal/green for completed path
+      const trailColor = Color.TEAL
+
+      const entity = entities.add({
+        id: `trail_${droneId}`,
+        name: `${droneId} Trail`,
+        polyline: {
+          positions: positions,
+          width: 4,
+          material: trailColor.withAlpha(0.7),
+          clampToGround: false
+        }
+      })
+
+      entitiesRef.current[`trail_${droneId}`] = entity
+    })
+  }, [droneTrails, layers.trails])
 
   return (
     <div className="cesium-viewer-container">
