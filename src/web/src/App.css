@@ -3,25 +3,89 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #000;
-  color: #fff;
+  background: radial-gradient(circle at 10% 20%, rgba(60, 90, 117, 0.08), transparent 25%),
+    radial-gradient(circle at 90% 10%, rgba(80, 124, 168, 0.08), transparent 30%),
+    #050a10;
+  color: #e8f1f8;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 .app-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 20px;
-  background: #1a1a1a;
-  border-bottom: 1px solid #333;
+  padding: 18px 22px;
+  background: rgba(10, 14, 18, 0.9);
+  border-bottom: 1px solid #1b2731;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.45);
   z-index: 1000;
+  gap: 20px;
 }
 
-.app-header h1 {
+.header-title h1 {
+  margin: 4px 0;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+.subhead {
   margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-  color: #4CAF50;
+  color: #9fb4c4;
+  font-size: 13px;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  font-size: 11px;
+  color: #6f7f8b;
+}
+
+.header-actions {
+  min-width: 320px;
+}
+
+.status-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #13202b;
+  background: rgba(15, 19, 23, 0.9);
+}
+
+.status-banner .status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #4CAF50;
+  box-shadow: 0 0 0 4px rgba(76, 175, 80, 0.18);
+}
+
+.status-banner .status-text {
+  font-size: 14px;
+  color: #d7e6f2;
+}
+
+.status-banner.error {
+  background: rgba(244, 67, 54, 0.1);
+  border-color: rgba(244, 67, 54, 0.2);
+}
+
+.status-banner.error .status-dot {
+  background: #f44336;
+  box-shadow: 0 0 0 4px rgba(244, 67, 54, 0.18);
+}
+
+.status-banner.info {
+  background: rgba(62, 166, 255, 0.08);
+  border-color: rgba(62, 166, 255, 0.2);
+}
+
+.status-banner.success {
+  background: rgba(76, 175, 80, 0.08);
+  border-color: rgba(76, 175, 80, 0.2);
 }
 
 .app-main {
@@ -31,55 +95,110 @@
 }
 
 .left-panel {
-  width: 250px;
-  background: #1a1a1a;
-  border-right: 1px solid #333;
-  padding: 15px;
+  width: 280px;
+  background: rgba(8, 12, 16, 0.92);
+  border-right: 1px solid #12202b;
+  padding: 18px 16px;
   overflow-y: auto;
+  backdrop-filter: blur(4px);
 }
 
 .viewer-container {
   flex: 1;
   position: relative;
+  background: radial-gradient(circle at 20% 20%, rgba(58, 98, 133, 0.08), transparent 30%),
+    linear-gradient(180deg, #070d14 0%, #050a10 100%);
 }
 
 .right-panel {
-  width: 300px;
-  background: #1a1a1a;
-  border-left: 1px solid #333;
-  padding: 15px;
+  width: 320px;
+  background: rgba(8, 12, 16, 0.92);
+  border-left: 1px solid #12202b;
+  padding: 18px 16px;
   overflow-y: auto;
+  backdrop-filter: blur(4px);
 }
 
 .app-footer {
-  background: #1a1a1a;
-  border-top: 1px solid #333;
-  padding: 15px 20px;
+  background: rgba(8, 12, 16, 0.95);
+  border-top: 1px solid #12202b;
+  padding: 14px 20px;
   z-index: 1000;
+}
+
+.panel-card {
+  background: #0f1317;
+  border: 1px solid #1f2a31;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.card-header h3 {
+  margin: 0;
+}
+
+.pill {
+  padding: 6px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  border: 1px solid #2d3d4c;
+  color: #9fb4c4;
+}
+
+.pill.success {
+  border-color: #4CAF50;
+  color: #baf7c6;
+}
+
+.pill.muted {
+  color: #6f7f8b;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.label {
+  font-size: 12px;
+  color: #7f94a5;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.value {
+  font-size: 14px;
+  font-weight: 700;
 }
 
 /* Responsive design */
 @media (max-width: 1024px) {
+  .app-main {
+    flex-direction: column;
+  }
+
   .left-panel,
   .right-panel {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    z-index: 100;
-    transform: translateX(-100%);
-    transition: transform 0.3s ease;
+    width: 100%;
+    order: 2;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
   }
 
-  .right-panel {
-    right: 0;
-    transform: translateX(100%);
-  }
-
-  .left-panel.open {
-    transform: translateX(0);
-  }
-
-  .right-panel.open {
-    transform: translateX(0);
+  .viewer-container {
+    order: 1;
+    height: 60vh;
   }
 }

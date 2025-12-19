@@ -14,7 +14,15 @@ import {
 import 'cesium/Build/Cesium/Widgets/widgets.css'
 import './CesiumViewer.css'
 
-const CesiumViewer = ({ scenario, telemetryData, droneTrails, currentTime, layers, onDroneSelect }) => {
+const CesiumViewer = ({
+  scenario,
+  telemetryData,
+  droneTrails,
+  layers,
+  onDroneSelect,
+  isLoading,
+  statusMessage
+}) => {
   const viewerRef = useRef(null)
   const cesiumContainerRef = useRef(null)
   const [selectedDroneId, setSelectedDroneId] = useState(null)
@@ -66,7 +74,7 @@ const CesiumViewer = ({ scenario, telemetryData, droneTrails, currentTime, layer
   // Fly to scenario location
   useEffect(() => {
     if (scenario && viewerRef.current) {
-      const { originLat, originLon } = scenario.scenario
+      const { originLat, originLon } = scenario
 
       viewerRef.current.camera.flyTo({
         destination: Cartesian3.fromDegrees(originLon, originLat, 1500),
@@ -125,7 +133,7 @@ const CesiumViewer = ({ scenario, telemetryData, droneTrails, currentTime, layer
     if (!layers.corridors) return
 
     // Add new corridor entities with enhanced visibility
-    scenario.corridors.forEach((corridor) => {
+    (scenario.corridors || []).forEach((corridor) => {
       const positions = corridor.centerline.map((point) =>
         Cartesian3.fromDegrees(point[1], point[0], point[2])
       )
@@ -277,16 +285,31 @@ const CesiumViewer = ({ scenario, telemetryData, droneTrails, currentTime, layer
     })
   }, [droneTrails, layers.trails])
 
+  const droneCount = telemetryData?.drones?.length ?? 0
+  const timeLabel = telemetryData?.time !== undefined ? `${telemetryData.time.toFixed(1)}s` : '—'
+
   return (
     <div className="cesium-viewer-container">
       <div ref={cesiumContainerRef} style={{ width: '100%', height: '100%' }} />
 
-      {telemetryData && (
-        <div className="viewer-overlay">
-          <div className="status-bar">
-            <div>Drones: {telemetryData.drones.length}</div>
-            <div>Time: {telemetryData.time.toFixed(1)}s</div>
-          </div>
+      <div className="viewer-overlay">
+        <div className="status-bar">
+          <div className="status-pill">Drones: {droneCount}</div>
+          <div className="status-pill">Time: {timeLabel}</div>
+          <div className="status-pill secondary">{scenario ? scenario.name : 'No scenario loaded'}</div>
+          {statusMessage?.text && (
+            <div className={`status-pill badge ${statusMessage.type}`}>
+              {statusMessage.text}
+            </div>
+          )}
+          {isLoading && <div className="status-pill badge loading">Loading telemetry…</div>}
+        </div>
+      </div>
+
+      {!scenario && (
+        <div className="empty-overlay">
+          <div className="empty-title">Awaiting scenario</div>
+          <p>Load a scenario from the header to start visualizing drone traffic.</p>
         </div>
       )}
     </div>
