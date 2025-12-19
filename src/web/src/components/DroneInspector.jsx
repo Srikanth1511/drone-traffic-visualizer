@@ -11,6 +11,9 @@ const DroneInspector = ({ drone }) => {
     )
   }
 
+  const formatNumber = (value, digits = 1, fallback = '—') =>
+    Number.isFinite(value) ? value.toFixed(digits) : fallback
+
   const getHealthColor = (health) => {
     switch (health) {
       case 'OK':
@@ -35,6 +38,10 @@ const DroneInspector = ({ drone }) => {
     )
   }
 
+  const batteryLevel = Number.isFinite(drone?.payload?.battery)
+    ? Math.round(drone.payload.battery * 100)
+    : null
+
   return (
     <div className="drone-inspector">
       <h2>Drone Inspector</h2>
@@ -50,19 +57,19 @@ const DroneInspector = ({ drone }) => {
         <h3>Position</h3>
         <div className="data-row">
           <span className="label">Latitude:</span>
-          <span className="value">{drone.lat.toFixed(6)}°</span>
+          <span className="value">{formatNumber(drone.lat, 6)}°</span>
         </div>
         <div className="data-row">
           <span className="label">Longitude:</span>
-          <span className="value">{drone.lon.toFixed(6)}°</span>
+          <span className="value">{formatNumber(drone.lon, 6)}°</span>
         </div>
         <div className="data-row">
           <span className="label">Alt (MSL):</span>
-          <span className="value">{drone.alt_msl.toFixed(1)} m</span>
+          <span className="value">{formatNumber(drone.alt_msl)} m</span>
         </div>
         <div className="data-row">
           <span className="label">Alt (AGL):</span>
-          <span className="value">{drone.alt_agl.toFixed(1)} m</span>
+          <span className="value">{formatNumber(drone.alt_agl)} m</span>
         </div>
       </div>
 
@@ -70,15 +77,15 @@ const DroneInspector = ({ drone }) => {
         <h3>Flight Data</h3>
         <div className="data-row">
           <span className="label">Heading:</span>
-          <span className="value">{drone.heading.toFixed(1)}°</span>
+          <span className="value">{formatNumber(drone.heading)}°</span>
         </div>
         <div className="data-row">
           <span className="label">Speed:</span>
-          <span className="value">{drone.speed.toFixed(1)} m/s</span>
+          <span className="value">{formatNumber(drone.speed)} m/s</span>
         </div>
         <div className="data-row">
           <span className="label">V-Speed:</span>
-          <span className="value">{drone.verticalSpeed?.toFixed(1) || '0.0'} m/s</span>
+          <span className="value">{formatNumber(drone.verticalSpeed)} m/s</span>
         </div>
       </div>
 
@@ -93,15 +100,16 @@ const DroneInspector = ({ drone }) => {
         <div className="data-row">
           <span className="label">Link Quality:</span>
           <span className="value">
-            {(drone.linkQuality * 100).toFixed(0)}%
+            {formatNumber(drone.linkQuality * 100, 0)}%
           </span>
         </div>
-        {drone.payload && (
-          <div className="data-row">
+        {batteryLevel !== null && (
+          <div className="data-row battery-row">
             <span className="label">Battery:</span>
-            <span className="value">
-              {(drone.payload.battery * 100).toFixed(0)}%
-            </span>
+            <div className="battery-meter">
+              <div className="battery-fill" style={{ width: `${batteryLevel}%` }} />
+              <span className="battery-text">{batteryLevel}%</span>
+            </div>
           </div>
         )}
       </div>

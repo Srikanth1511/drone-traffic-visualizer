@@ -35,12 +35,32 @@ class PlaybackAdapter:
         self.origin_lon = origin_lon
         self.data: Optional[Dict[str, Any]] = None
         self.corridors: List[Corridor] = []
+        self.start_time: float = 0.0
+        self.end_time: float = 0.0
         self._load_data()
 
     def _load_data(self) -> None:
         """Load simulation data from JSON file."""
-        with open(self.simulation_file, 'r') as f:
-            self.data = json.load(f)
+        try:
+            with open(self.simulation_file, 'r') as f:
+                self.data = json.load(f)
+        except FileNotFoundError as exc:
+            raise FileNotFoundError(
+                f"Simulation file not found at {self.simulation_file}"
+            ) from exc
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                f"Simulation file at {self.simulation_file} is not valid JSON"
+            ) from exc
+
+        if not self.data or 'timesteps' not in self.data:
+            raise ValueError("Simulation data missing required 'timesteps' entries")
+
+        if not self.data['timesteps']:
+            raise ValueError("Simulation data contains no timesteps to play back")
+
+        self.start_time = self.data['timesteps'][0]['time']
+        self.end_time = self.data['timesteps'][-1]['time']
 
         # Load corridors if present
         if 'corridors' in self.data:
@@ -109,6 +129,9 @@ class PlaybackAdapter:
             return None
 
         timesteps = self.data['timesteps']
+
+        if time < self.start_time or time > self.end_time:
+            return None
 
         # Find closest timestep
         closest_idx = 0

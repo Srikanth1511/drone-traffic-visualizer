@@ -9,18 +9,30 @@ import {
   Math as CesiumMath,
   Cartesian2,
   GoogleMaps,
-  createGooglePhotorealistic3DTileset
+  createGooglePhotorealistic3DTileset,
+  Rectangle
 } from 'cesium'
 import 'cesium/Build/Cesium/Widgets/widgets.css'
 import './CesiumViewer.css'
 
-const CesiumViewer = ({ scenario, telemetryData, droneTrails, currentTime, layers, onDroneSelect }) => {
+const CesiumViewer = ({
+  scenario,
+  telemetryData,
+  droneTrails,
+  layers,
+  onDroneSelect,
+  isLoading,
+  statusMessage,
+  facilityCells,
+  onStatus
+}) => {
   const viewerRef = useRef(null)
   const cesiumContainerRef = useRef(null)
   const [selectedDroneId, setSelectedDroneId] = useState(null)
   const entitiesRef = useRef({})
   const corridorProgressRef = useRef({})
   const googleTilesetRef = useRef(null)
+  const facilityEntitiesRef = useRef([])
 
   // Initialize Cesium Viewer
   useEffect(() => {
@@ -66,7 +78,7 @@ const CesiumViewer = ({ scenario, telemetryData, droneTrails, currentTime, layer
   // Fly to scenario location
   useEffect(() => {
     if (scenario && viewerRef.current) {
-      const { originLat, originLon } = scenario.scenario
+      const { originLat, originLon } = scenario
 
       viewerRef.current.camera.flyTo({
         destination: Cartesian3.fromDegrees(originLon, originLat, 1500),
@@ -87,25 +99,77 @@ const CesiumViewer = ({ scenario, telemetryData, droneTrails, currentTime, layer
     const viewer = viewerRef.current
     const googleApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 
-    if (layers.googleTiles && googleApiKey) {
-      // Add Google 3D Tiles if not already added
-      if (!googleTilesetRef.current) {
-        try {
-          const tileset = createGooglePhotorealistic3DTileset()
-          viewer.scene.primitives.add(tileset)
-          googleTilesetRef.current = tileset
-        } catch (error) {
-          console.error('Error loading Google 3D Tiles:', error)
-        }
-      } else {
-        // Show existing tileset
+    const addTiles = async () => {
+      if (googleTilesetRef.current) {
         googleTilesetRef.current.show = true
+        return
       }
+
+      try {
+        const tileset = await createGooglePhotorealistic3DTileset()
+        viewer.scene.primitives.add(tileset)
+        googleTilesetRef.current = tileset
+
+        if (tileset.readyPromise) {
+          tileset.readyPromise
+            .then(() => onStatus?.('success', 'Google 3D Tiles loaded'))
+            .catch((err) => {
+              console.error('Google 3D Tiles failed to become ready', err)
+              onStatus?.('error', 'Google 3D Tiles failed to load. Check API key and billing.')
+              googleTilesetRef.current = null
+            })
+        }
+      } catch (error) {
+        console.error('Error loading Google 3D Tiles:', error)
+        onStatus?.('error', 'Google 3D Tiles failed to load. Check API key and billing.')
+        googleTilesetRef.current = null
+      }
+    }
+
+    if (layers.googleTiles && googleApiKey) {
+      addTiles()
     } else if (googleTilesetRef.current) {
       // Hide Google 3D Tiles
       googleTilesetRef.current.show = false
     }
   }, [layers.googleTiles])
+
+  // Render facility map overlays
+  useEffect(() => {
+    if (!viewerRef.current) return
+
+    const viewer = viewerRef.current
+    const entities = viewer.entities
+
+    facilityEntitiesRef.current.forEach((entity) => entities.remove(entity))
+    facilityEntitiesRef.current = []
+
+    if (!layers.facilityMap || !facilityCells?.length) return
+
+    facilityCells.forEach((cell) => {
+      const rectangle = Rectangle.fromDegrees(
+        cell.lonMin,
+        cell.latMin,
+        cell.lonMax,
+        cell.latMax
+      )
+
+      const entity = entities.add({
+        id: `facility_${cell.lonMin}_${cell.latMin}`,
+        name: 'Facility ceiling',
+        rectangle: {
+          coordinates: rectangle,
+          material: Color.fromBytes(255, 193, 7, 90),
+          outline: true,
+          outlineColor: Color.fromBytes(255, 193, 7, 150),
+          outlineWidth: 1
+        },
+        description: `Ceiling: ${cell.maxAltitudeAgl}m AGL`
+      })
+
+      facilityEntitiesRef.current.push(entity)
+    })
+  }, [facilityCells, layers.facilityMap])
 
   // Render corridors with full path visibility
   useEffect(() => {
@@ -125,7 +189,7 @@ const CesiumViewer = ({ scenario, telemetryData, droneTrails, currentTime, layer
     if (!layers.corridors) return
 
     // Add new corridor entities with enhanced visibility
-    scenario.corridors.forEach((corridor) => {
+    (scenario.corridors || []).forEach((corridor) => {
       const positions = corridor.centerline.map((point) =>
         Cartesian3.fromDegrees(point[1], point[0], point[2])
       )
@@ -277,16 +341,31 @@ const CesiumViewer = ({ scenario, telemetryData, droneTrails, currentTime, layer
     })
   }, [droneTrails, layers.trails])
 
+  const droneCount = telemetryData?.drones?.length ?? 0
+  const timeLabel = telemetryData?.time !== undefined ? `${telemetryData.time.toFixed(1)}s` : '—'
+
   return (
     <div className="cesium-viewer-container">
       <div ref={cesiumContainerRef} style={{ width: '100%', height: '100%' }} />
 
-      {telemetryData && (
-        <div className="viewer-overlay">
-          <div className="status-bar">
-            <div>Drones: {telemetryData.drones.length}</div>
-            <div>Time: {telemetryData.time.toFixed(1)}s</div>
-          </div>
+      <div className="viewer-overlay">
+        <div className="status-bar">
+          <div className="status-pill">Drones: {droneCount}</div>
+          <div className="status-pill">Time: {timeLabel}</div>
+          <div className="status-pill secondary">{scenario ? scenario.name : 'No scenario loaded'}</div>
+          {statusMessage?.text && (
+            <div className={`status-pill badge ${statusMessage.type}`}>
+              {statusMessage.text}
+            </div>
+          )}
+          {isLoading && <div className="status-pill badge loading">Loading telemetry…</div>}
+        </div>
+      </div>
+
+      {!scenario && (
+        <div className="empty-overlay">
+          <div className="empty-title">Awaiting scenario</div>
+          <p>Load a scenario from the header to start visualizing drone traffic.</p>
         </div>
       )}
     </div>

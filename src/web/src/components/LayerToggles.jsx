@@ -34,7 +34,10 @@ const LayerToggles = ({ layers, onToggle }) => {
 
       <div className="layer-info">
         <p className="info-text">
-          Toggle layers to show/hide elements on the map.
+          Facility Map highlights FAA ceiling grid cells; hide it if you prefer a clean view.
+        </p>
+        <p className="info-text">
+          Google 3D Tiles needs <code>VITE_GOOGLE_MAPS_API_KEY</code> in <code>.env.local</code> (copy from <code>.env.local.template</code>), then restart <code>npm run dev</code>.
         </p>
       </div>
     </div>
