@@ -204,37 +204,18 @@ const CesiumViewer = ({
       if (corridor.type === 'parallel') baseColor = Color.SKYBLUE
       if (corridor.type === 'switching') baseColor = Color.MAGENTA
 
-      // Full planned path (white lines showing complete mission/route)
-      const plannedEntity = entities.add({
-        id: `corridor_planned_${corridor.id}`,
-        name: `${corridor.id} (Planned Mission)`,
-        polyline: {
-          positions: positions,
-          width: 3,
-          material: Color.WHITE.withAlpha(0.5),
-          clampToGround: true
-        }
-      })
-
-      entitiesRef.current[`corridor_planned_${corridor.id}`] = plannedEntity
-
-      // Active path (colored, shows drone progress)
-      const activeEntity = entities.add({
+      // Single path - white for planned mission (simplified for performance)
+      const pathEntity = entities.add({
         id: `corridor_${corridor.id}`,
-        name: `${corridor.id} (Active)`,
+        name: `${corridor.id} (Mission Path)`,
         polyline: {
           positions: positions,
-          width: 5,
-          material: new PolylineOutlineMaterialProperty({
-            color: baseColor.withAlpha(0.7),
-            outlineWidth: 1,
-            outlineColor: Color.WHITE.withAlpha(0.3)
-          }),
-          clampToGround: true
+          width: 4,
+          material: Color.WHITE.withAlpha(0.6)
         }
       })
 
-      entitiesRef.current[`corridor_${corridor.id}`] = activeEntity
+      entitiesRef.current[`corridor_${corridor.id}`] = pathEntity
     })
   }, [scenario, layers.corridors])
 
@@ -294,42 +275,45 @@ const CesiumViewer = ({
       if (modelUri) {
         entity.model = {
           uri: modelUri,
-          minimumPixelSize: isSelected ? 80 : 60,
-          maximumScale: 200,
-          scale: 1.0,
+          minimumPixelSize: isSelected ? 120 : 100,
+          maximumScale: 500,
+          scale: 2.0,
           heightReference: HeightReference.RELATIVE_TO_GROUND
         }
         entity.box = undefined
       } else {
         entity.model = undefined
         entity.box = {
-          dimensions: isSelected ? new Cartesian3(10, 10, 3) : new Cartesian3(8, 8, 2.5),
+          dimensions: isSelected ? new Cartesian3(25, 25, 8) : new Cartesian3(20, 20, 6),
           material: color,
           outline: true,
-          outlineColor: isSelected ? Color.WHITE : Color.BLACK.withAlpha(0.5),
-          outlineWidth: isSelected ? 2 : 1,
+          outlineColor: Color.WHITE,
+          outlineWidth: 3,
           heightReference: HeightReference.RELATIVE_TO_GROUND
         }
       }
 
-      entity.label = isSelected ? {
+      // Always show label for better visibility
+      entity.label = {
         text: drone.id,
-        font: '12px sans-serif',
+        font: isSelected ? '14px bold sans-serif' : '12px sans-serif',
         fillColor: Color.WHITE,
         outlineColor: Color.BLACK,
         outlineWidth: 2,
         style: 1,
-        pixelOffset: new Cartesian2(0, -20),
+        pixelOffset: new Cartesian2(0, -30),
         show: true,
-        heightReference: HeightReference.RELATIVE_TO_GROUND
-      } : undefined
+        heightReference: HeightReference.RELATIVE_TO_GROUND,
+        disableDepthTestDistance: Number.POSITIVE_INFINITY
+      }
 
-      entity.polyline = isSelected ? {
+      // Vertical line from drone to ground (always visible)
+      entity.polyline = {
         positions: [position, Cartesian3.fromDegrees(drone.lon, drone.lat, 0)],
-        width: 1,
-        material: Color.WHITE.withAlpha(0.5),
+        width: 2,
+        material: color.withAlpha(0.6),
         clampToGround: true
-      } : undefined
+      }
 
       activeIds.add(entityId)
     })
@@ -376,9 +360,8 @@ const CesiumViewer = ({
         name: `${droneId} Trail`,
         polyline: {
           positions: positions,
-          width: 4,
-          material: trailColor.withAlpha(0.7),
-          clampToGround: true
+          width: 5,
+          material: trailColor.withAlpha(0.8)
         }
       })
 

@@ -131,8 +131,8 @@ function App() {
             alt: drone.alt_agl, // Use AGL for proper terrain-relative positioning
             time: data.time
           })
-          // Keep last 2000 positions
-          if (newTrails[drone.id].length > 2000) {
+          // Keep last 300 positions for better performance
+          if (newTrails[drone.id].length > 300) {
             newTrails[drone.id].shift()
           }
         })
