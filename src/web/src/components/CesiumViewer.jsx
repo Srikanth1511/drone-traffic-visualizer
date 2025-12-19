@@ -10,7 +10,9 @@ import {
   Cartesian2,
   GoogleMaps,
   createGooglePhotorealistic3DTileset,
-  Rectangle
+  Rectangle,
+  ScreenSpaceEventHandler,
+  ScreenSpaceEventType
 } from 'cesium'
 import 'cesium/Build/Cesium/Widgets/widgets.css'
 import './CesiumViewer.css'
@@ -21,11 +23,13 @@ const CesiumViewer = ({
   droneTrails,
   layers,
   onDroneSelect,
+  onDroneHover,
   isLoading,
   statusMessage,
   facilityCells,
   onStatus,
-  googleApiKey
+  googleApiKey,
+  focusPosition
 }) => {
   const viewerRef = useRef(null)
   const cesiumContainerRef = useRef(null)
@@ -35,12 +39,12 @@ const CesiumViewer = ({
   const facilityEntitiesRef = useRef([])
   const trailEntitiesRef = useRef({})
   const recentTrailEntitiesRef = useRef({})
+  const hoverHandlerRef = useRef(null)
 
   // Initialize Cesium Viewer
   useEffect(() => {
     if (!cesiumContainerRef.current || viewerRef.current) return
 
-    // Set Google Maps API key if available
     const viewer = new Viewer(cesiumContainerRef.current, {
       timeline: false,
       animation: false,
@@ -64,13 +68,27 @@ const CesiumViewer = ({
       }
     })
 
+    hoverHandlerRef.current = new ScreenSpaceEventHandler(viewer.canvas)
+    hoverHandlerRef.current.setInputAction((movement) => {
+      const picked = viewer.scene.pick(movement.endPosition)
+      if (picked && picked.id && picked.id.droneData) {
+        const drone = picked.id.droneData
+        setSelectedDroneId(drone.id)
+        onDroneHover?.(drone)
+      }
+    }, ScreenSpaceEventType.MOUSE_MOVE)
+
     return () => {
       if (viewerRef.current) {
         viewerRef.current.destroy()
         viewerRef.current = null
       }
+      if (hoverHandlerRef.current) {
+        hoverHandlerRef.current.destroy()
+        hoverHandlerRef.current = null
+      }
     }
-  }, [onDroneSelect])
+  }, [onDroneSelect, onDroneHover])
 
   useEffect(() => {
     const apiKey = googleApiKey || import.meta.env.VITE_GOOGLE_MAPS_API_KEY
@@ -79,22 +97,32 @@ const CesiumViewer = ({
     }
   }, [googleApiKey])
 
-  // Fly to scenario location
+  // Fly to scenario location / focus
   useEffect(() => {
-    if (scenario && viewerRef.current) {
+    if (viewerRef.current && focusPosition) {
+      viewerRef.current.camera.flyTo({
+        destination: Cartesian3.fromDegrees(focusPosition.lon, focusPosition.lat, 800),
+        orientation: {
+          heading: CesiumMath.toRadians(0),
+          pitch: CesiumMath.toRadians(-35),
+          roll: 0.0
+        },
+        duration: 1.2
+      })
+    } else if (scenario && viewerRef.current) {
       const { originLat, originLon } = scenario
 
       viewerRef.current.camera.flyTo({
-        destination: Cartesian3.fromDegrees(originLon, originLat, 1500),
+        destination: Cartesian3.fromDegrees(originLon, originLat, 1200),
         orientation: {
           heading: CesiumMath.toRadians(0),
-          pitch: CesiumMath.toRadians(-45),
+          pitch: CesiumMath.toRadians(-35),
           roll: 0.0
         },
-        duration: 2.0
+        duration: 1.2
       })
     }
-  }, [scenario])
+  }, [scenario, focusPosition])
 
   // Toggle Google Photorealistic 3D Tiles
   useEffect(() => {

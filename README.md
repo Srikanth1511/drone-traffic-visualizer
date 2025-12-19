@@ -68,6 +68,16 @@ npm install
 npm run dev
 ```
 
+### Frontend environment
+
+1. Copy the template and add your keys:
+   ```bash
+   cd src/web
+   cp .env.local.template .env.local
+   ```
+2. Set `VITE_GOOGLE_MAPS_API_KEY` in `.env.local` (enable the **Map Tiles API** and billing). Restart `npm run dev` after editing so Vite picks up the key.
+3. (Optional) Add your own drone model by setting `VITE_DRONE_MODEL_URL` to a GLB/GLTF path (for example `/models/drone.glb` under `src/web/public`).
+
 ### Access
 
 - **Frontend**: http://localhost:3000

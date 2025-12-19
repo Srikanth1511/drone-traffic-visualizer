@@ -212,6 +212,11 @@ class PlaybackAdapter:
         # For now, assume ground elevation is 0 (will be improved with altitude service)
         alt_msl = alt_agl
 
+        # Slightly stagger altitudes per-drone for clearer 3D separation
+        hash_offset = sum(ord(c) for c in uav_id) % 6  # 0-5
+        alt_agl += hash_offset * 3.0
+        alt_msl += hash_offset * 3.0
+
         # Parse battery (normalize to 0-1 if needed)
         battery = state.get('battery', 1.0)
         if battery > 1.0:

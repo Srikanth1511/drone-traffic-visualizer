@@ -21,6 +21,7 @@ function App() {
   const [selectedDrone, setSelectedDrone] = useState(null)
   const [droneTrails, setDroneTrails] = useState({})
   const [facilityCells, setFacilityCells] = useState([])
+  const [focusPosition, setFocusPosition] = useState(null)
   const [layers, setLayers] = useState({
     drones: true,
     corridors: true,
@@ -32,10 +33,14 @@ function App() {
   const googleApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 
   const isReady = useMemo(() => Boolean(scenario && duration > 0), [scenario, duration])
-  const scenarioName = scenario?.name || scenario?.metadata?.name || 'Scenario'
 
   const updateStatus = (type, text) => setScenarioStatus({ type, text })
   const handleViewerStatus = (type, text) => setScenarioStatus({ type, text })
+  const handleHoverDrone = (drone) => {
+    if (drone) {
+      setSelectedDrone(drone)
+    }
+  }
 
   const loadScenario = async (scenarioConfig) => {
     setScenarioLoading(true)
@@ -87,7 +92,12 @@ function App() {
         setFacilityCells([])
       }
 
-      await fetchTelemetryFrame(0, { showLoader: true, stopOnError: true })
+      const firstFrame = await fetchTelemetryFrame(0, { showLoader: true, stopOnError: true })
+      if (firstFrame?.drones?.length) {
+        const avgLat = firstFrame.drones.reduce((sum, d) => sum + d.lat, 0) / firstFrame.drones.length
+        const avgLon = firstFrame.drones.reduce((sum, d) => sum + d.lon, 0) / firstFrame.drones.length
+        setFocusPosition({ lat: avgLat, lon: avgLon })
+      }
     } catch (error) {
       console.error('Error loading scenario:', error)
       setScenario(null)
@@ -135,6 +145,8 @@ function App() {
         })
         return newTrails
       })
+
+      return data
     } catch (error) {
       console.error('Error fetching telemetry:', error)
       updateStatus('error', error.message || 'Telemetry fetch failed')
@@ -221,92 +233,57 @@ function App() {
 
   return (
     <div className="app">
-      <div className="viewer-container">
-        <CesiumViewer
-          scenario={scenario}
-          telemetryData={telemetryData}
-          droneTrails={droneTrails}
-          layers={layers}
-          onDroneSelect={setSelectedDrone}
-          isLoading={telemetryLoading || scenarioLoading}
-          statusMessage={scenarioStatus}
-          facilityCells={facilityCells}
-          onStatus={handleViewerStatus}
-          googleApiKey={googleApiKey}
-        />
-      </div>
-
-      <div className="ui-overlay">
-        <div className="top-bar">
-          <div className="header-title">
-            <div className="eyebrow">Live Ops Console</div>
-            <div className="title-row">
-              <h1>Drone Traffic Visualizer</h1>
-              <div className={`status-chip ${scenarioStatus.type}`}>
-                <span className="status-dot" />
-                {scenarioStatus.text}
-              </div>
-            </div>
-            <p className="subhead">Map-first view with quick access controls pinned to the side.</p>
-          </div>
-          <div className="header-actions">
-            <ScenarioSelector onLoadScenario={loadScenario} loading={scenarioLoading} />
-          </div>
+      <header className="app-header">
+        <div className="brand">Drone Traffic Visualizer</div>
+        <div className="header-actions">
+          <ScenarioSelector onLoadScenario={loadScenario} loading={scenarioLoading} />
         </div>
+      </header>
 
-        <div className="side-dock">
-          <div className="panel-stack">
-            <div className="panel-card">
-              <div className="card-header">
-                <div>
-                  <div className="eyebrow">Session</div>
-                  <h3>{scenario ? scenarioName : 'No scenario loaded'}</h3>
-                </div>
-                <div className={`pill ${isPlaying ? 'success' : 'muted'}`}>
-                  {isPlaying ? 'Playing' : 'Idle'}
-                </div>
-              </div>
-              <div className="card-grid">
-                <div>
-                  <div className="label">Playback</div>
-                  <div className="value">{duration ? `${currentTime.toFixed(1)} / ${duration.toFixed(1)}s` : '—'}</div>
-                </div>
-                <div>
-                  <div className="label">Speed</div>
-                  <div className="value">{playbackSpeed}x</div>
-                </div>
-                <div>
-                  <div className="label">Drones</div>
-                  <div className="value">{telemetryData?.drones?.length ?? 0}</div>
-                </div>
-                <div>
-                  <div className="label">Last update</div>
-                  <div className="value">{lastUpdated ? lastUpdated.toLocaleTimeString() : '—'}</div>
-                </div>
-              </div>
-            </div>
-
-            <LayerToggles layers={layers} onToggle={toggleLayer} hasGoogleKey={Boolean(googleApiKey)} />
-            <PlaybackControls
-              currentTime={currentTime}
-              duration={duration}
-              isPlaying={isPlaying}
-              playbackSpeed={playbackSpeed}
-              onTimeChange={handleTimeChange}
-              onPlayPause={handlePlayPause}
-              onReset={handleReset}
-              onSpeedChange={handleSpeedChange}
-              onStepBackward={() => stepPlayback(-2)}
-              onStepForward={() => stepPlayback(2)}
-              isLoading={telemetryLoading || scenarioLoading}
-              isReady={isReady}
-            />
+      <div className="app-body">
+        <aside className="sidebar">
+          <LayerToggles layers={layers} onToggle={toggleLayer} hasGoogleKey={Boolean(googleApiKey)} />
+          <PlaybackControls
+            currentTime={currentTime}
+            duration={duration}
+            isPlaying={isPlaying}
+            playbackSpeed={playbackSpeed}
+            onTimeChange={handleTimeChange}
+            onPlayPause={handlePlayPause}
+            onReset={handleReset}
+            onSpeedChange={handleSpeedChange}
+            onStepBackward={() => stepPlayback(-2)}
+            onStepForward={() => stepPlayback(2)}
+            isLoading={telemetryLoading || scenarioLoading}
+            isReady={isReady}
+          />
+          <div className="status-textual">
+            <div>Drones: {telemetryData?.drones?.length ?? 0}</div>
+            <div>Time: {telemetryData?.time?.toFixed ? `${telemetryData.time.toFixed(1)}s` : '—'}</div>
+            <div>Status: {scenarioStatus.text}</div>
           </div>
+        </aside>
 
-          <div className="panel-stack narrow">
-            <DroneInspector drone={selectedDrone} />
-          </div>
-        </div>
+        <main className="viewer-shell">
+          <CesiumViewer
+            scenario={scenario}
+            telemetryData={telemetryData}
+            droneTrails={droneTrails}
+            layers={layers}
+            onDroneSelect={setSelectedDrone}
+            onDroneHover={handleHoverDrone}
+            isLoading={telemetryLoading || scenarioLoading}
+            statusMessage={scenarioStatus}
+            facilityCells={facilityCells}
+            onStatus={handleViewerStatus}
+            googleApiKey={googleApiKey}
+            focusPosition={focusPosition}
+          />
+        </main>
+
+        <aside className="inspector-panel">
+          <DroneInspector drone={selectedDrone} />
+        </aside>
       </div>
     </div>
   )
