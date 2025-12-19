@@ -1,7 +1,7 @@
 import React from 'react'
 import './LayerToggles.css'
 
-const LayerToggles = ({ layers, onToggle }) => {
+const LayerToggles = ({ layers, onToggle, hasGoogleKey }) => {
   const layerConfig = [
     { key: 'drones', label: 'Drones', icon: '🚁' },
     { key: 'corridors', label: 'Corridors', icon: '🛣️' },
@@ -35,6 +35,10 @@ const LayerToggles = ({ layers, onToggle }) => {
       <div className="layer-info">
         <p className="info-text">
           Toggle layers to show/hide elements on the map.
+        </p>
+        <p className="info-text">
+          Google 3D Tiles: {hasGoogleKey ? '✓ API key detected' : '✗ API key missing'}
+          {!hasGoogleKey && ' — Add VITE_GOOGLE_MAPS_API_KEY to src/web/.env.local'}
         </p>
       </div>
     </div>
