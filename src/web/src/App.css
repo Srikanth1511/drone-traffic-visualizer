@@ -33,8 +33,8 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 16px 18px;
-  margin: 12px;
+  padding: 14px 16px;
+  margin: 10px;
   background: rgba(7, 11, 16, 0.9);
   border: 1px solid rgba(31, 42, 49, 0.75);
   border-radius: 16px;
@@ -115,24 +115,40 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 96px 18px 18px;
-  gap: 16px;
+  padding: 78px 12px 12px;
+  gap: 12px;
   pointer-events: none;
 }
 
 .panel-stack {
-  width: 360px;
+  width: 320px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-height: calc(100vh - 140px);
+  max-height: calc(100vh - 120px);
   overflow-y: auto;
   pointer-events: all;
   padding-right: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: #2d3c48 #0b1015;
+}
+
+.panel-stack::-webkit-scrollbar {
+  width: 6px;
+}
+
+.panel-stack::-webkit-scrollbar-track {
+  background: #0b1015;
+  border-radius: 8px;
+}
+
+.panel-stack::-webkit-scrollbar-thumb {
+  background: #2d3c48;
+  border-radius: 8px;
 }
 
 .panel-stack.narrow {
-  width: 320px;
+  width: 300px;
   margin-left: auto;
 }
 

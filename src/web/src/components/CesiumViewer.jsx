@@ -278,12 +278,12 @@ const CesiumViewer = ({
         if (modelUri) {
           entity.model = {
             uri: modelUri,
-            minimumPixelSize: 30,
-            maximumScale: 150,
-            scale: 1,
-            color: color.withAlpha(isSelected ? 1 : 0.95),
-            silhouetteSize: isSelected ? 2 : 1,
-            silhouetteColor: isSelected ? Color.WHITE : color.withAlpha(0.4)
+            minimumPixelSize: isSelected ? 60 : 40,
+            maximumScale: 220,
+            scale: 1.2,
+            color: color.withAlpha(isSelected ? 1 : 0.9),
+            silhouetteSize: isSelected ? 3 : 1.5,
+            silhouetteColor: isSelected ? Color.WHITE : color.withAlpha(0.5)
           }
           entity.box = undefined
           entity.ellipsoid = undefined
@@ -291,10 +291,11 @@ const CesiumViewer = ({
           entity.model = undefined
           entity.box = undefined
           entity.ellipsoid = {
-            radii: isSelected ? new Cartesian3(6, 6, 2.8) : new Cartesian3(5, 5, 2.2),
-            material: color.withAlpha(0.9),
+            radii: isSelected ? new Cartesian3(12, 12, 4.5) : new Cartesian3(9, 9, 3),
+            material: color.withAlpha(0.92),
             outline: true,
-            outlineColor: Color.WHITE.withAlpha(isSelected ? 0.85 : 0.45)
+            outlineColor: Color.WHITE.withAlpha(isSelected ? 0.9 : 0.5),
+            shadows: 1
           }
         }
 
