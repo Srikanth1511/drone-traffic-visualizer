@@ -21,7 +21,6 @@ function App() {
   const [selectedDrone, setSelectedDrone] = useState(null)
   const [droneTrails, setDroneTrails] = useState({})
   const [facilityCells, setFacilityCells] = useState([])
-  const [focusPosition, setFocusPosition] = useState(null)
   const [layers, setLayers] = useState({
     drones: true,
     corridors: true,
@@ -36,11 +35,6 @@ function App() {
 
   const updateStatus = (type, text) => setScenarioStatus({ type, text })
   const handleViewerStatus = (type, text) => setScenarioStatus({ type, text })
-  const handleHoverDrone = (drone) => {
-    if (drone) {
-      setSelectedDrone(drone)
-    }
-  }
 
   const loadScenario = async (scenarioConfig) => {
     setScenarioLoading(true)
@@ -93,11 +87,6 @@ function App() {
       }
 
       const firstFrame = await fetchTelemetryFrame(0, { showLoader: true, stopOnError: true })
-      if (firstFrame?.drones?.length) {
-        const avgLat = firstFrame.drones.reduce((sum, d) => sum + d.lat, 0) / firstFrame.drones.length
-        const avgLon = firstFrame.drones.reduce((sum, d) => sum + d.lon, 0) / firstFrame.drones.length
-        setFocusPosition({ lat: avgLat, lon: avgLon })
-      }
     } catch (error) {
       console.error('Error loading scenario:', error)
       setScenario(null)
@@ -252,13 +241,11 @@ function App() {
             droneTrails={droneTrails}
             layers={layers}
             onDroneSelect={setSelectedDrone}
-            onDroneHover={handleHoverDrone}
             isLoading={telemetryLoading || scenarioLoading}
             statusMessage={scenarioStatus}
             facilityCells={facilityCells}
             onStatus={handleViewerStatus}
             googleApiKey={googleApiKey}
-            focusPosition={focusPosition}
           />
         </main>
 
