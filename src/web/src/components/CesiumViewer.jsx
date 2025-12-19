@@ -10,7 +10,9 @@ import {
   Cartesian2,
   GoogleMaps,
   createGooglePhotorealistic3DTileset,
-  Rectangle
+  Rectangle,
+  HeightReference,
+  ArcType
 } from 'cesium'
 import 'cesium/Build/Cesium/Widgets/widgets.css'
 import './CesiumViewer.css'
@@ -256,7 +258,8 @@ const CesiumViewer = ({
 
     // Add new drone entities
     telemetryData.drones.forEach((drone) => {
-      const position = Cartesian3.fromDegrees(drone.lon, drone.lat, drone.alt_msl)
+      // Use AGL (above ground level) for proper positioning with 3D terrain
+      const position = Cartesian3.fromDegrees(drone.lon, drone.lat, drone.alt_agl)
 
       const heading = CesiumMath.toRadians(drone.heading)
       const hpr = new HeadingPitchRoll(heading, 0, 0)
@@ -280,7 +283,8 @@ const CesiumViewer = ({
           material: color,
           outline: true,
           outlineColor: isSelected ? Color.WHITE : Color.BLACK.withAlpha(0.5),
-          outlineWidth: isSelected ? 2 : 1
+          outlineWidth: isSelected ? 2 : 1,
+          heightReference: HeightReference.RELATIVE_TO_GROUND
         },
         label: isSelected ? {
           text: drone.id,
@@ -290,12 +294,14 @@ const CesiumViewer = ({
           outlineWidth: 2,
           style: 1,
           pixelOffset: new Cartesian2(0, -20),
-          show: true
+          show: true,
+          heightReference: HeightReference.RELATIVE_TO_GROUND
         } : undefined,
         polyline: isSelected ? {
           positions: [position, Cartesian3.fromDegrees(drone.lon, drone.lat, 0)],
           width: 1,
-          material: Color.WHITE.withAlpha(0.5)
+          material: Color.WHITE.withAlpha(0.5),
+          clampToGround: true
         } : undefined
       })
 
@@ -338,7 +344,8 @@ const CesiumViewer = ({
           positions: positions,
           width: 4,
           material: trailColor.withAlpha(0.7),
-          clampToGround: false
+          clampToGround: true,
+          arcType: ArcType.NONE
         }
       })
 

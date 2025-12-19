@@ -128,7 +128,7 @@ function App() {
           newTrails[drone.id].push({
             lat: drone.lat,
             lon: drone.lon,
-            alt: drone.alt_msl,
+            alt: drone.alt_agl, // Use AGL for proper terrain-relative positioning
             time: data.time
           })
           // Keep last 2000 positions
