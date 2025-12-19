@@ -8,13 +8,17 @@ import './App.css'
 
 function App() {
   const [scenario, setScenario] = useState(null)
+  const [scenarioStatus, setScenarioStatus] = useState({ type: 'info', text: 'Load a scenario to begin.' })
+  const [scenarioLoading, setScenarioLoading] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0)
   const [telemetryData, setTelemetryData] = useState(null)
+  const [telemetryLoading, setTelemetryLoading] = useState(false)
   const [selectedDrone, setSelectedDrone] = useState(null)
   const [droneTrails, setDroneTrails] = useState({}) // Track position history
+  const [facilityCells, setFacilityCells] = useState([])
   const [layers, setLayers] = useState({
     drones: true,
     corridors: true,
@@ -23,8 +27,22 @@ function App() {
     googleTiles: false // Google 3D tiles disabled by default (requires API key)
   })
 
+  // Check if Google Maps API key is available
+  const googleApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+  const hasGoogleKey = Boolean(googleApiKey && googleApiKey !== 'your_google_maps_api_key_here')
+
+  // Status update helpers
+  const updateStatus = (type, text) => setScenarioStatus({ type, text })
+  const handleViewerStatus = (type, text) => setScenarioStatus({ type, text })
+
   // Load scenario
   const loadScenario = async (scenarioConfig) => {
+    setScenarioLoading(true)
+    setScenarioStatus({ type: 'info', text: 'Loading scenario...' })
+    setIsPlaying(false)
+    setDroneTrails({})
+    setSelectedDrone(null)
+
     try {
       const response = await fetch('/api/scenario/load', {
         method: 'POST',
@@ -32,31 +50,72 @@ function App() {
         body: JSON.stringify(scenarioConfig)
       })
 
-      if (!response.ok) {
-        throw new Error('Failed to load scenario')
+      let payload
+      try {
+        payload = await response.json()
+      } catch (parseError) {
+        throw new Error('Server response was not valid JSON while loading scenario')
       }
 
-      const data = await response.json()
-      setScenario(data)
-      setDuration(data.scenario.duration)
+      if (!response.ok) {
+        throw new Error(payload?.detail || 'Failed to load scenario')
+      }
+
+      const loadedScenario = {
+        ...payload.scenario,
+        name: scenarioConfig.name,
+        metadata: payload.scenario?.metadata || scenarioConfig.metadata || {},
+        corridors: payload.corridors || []
+      }
+
+      setScenario(loadedScenario)
+      setDuration(payload.scenario.duration || 0)
       setCurrentTime(0)
+      updateStatus('success', `Loaded ${scenarioConfig.name || 'scenario'} successfully.`)
+
+      // Load facility map
+      try {
+        const facilityResponse = await fetch('/api/airspace/facility-map')
+        if (facilityResponse.ok) {
+          const facilityPayload = await facilityResponse.json()
+          setFacilityCells(facilityPayload?.cells || [])
+        } else {
+          setFacilityCells([])
+        }
+      } catch (facilityError) {
+        console.warn('Unable to load facility map grid', facilityError)
+        setFacilityCells([])
+      }
 
       // Load initial telemetry
-      await fetchTelemetryFrame(0)
+      await fetchTelemetryFrame(0, { showLoader: true, stopOnError: true })
     } catch (error) {
       console.error('Error loading scenario:', error)
+      setScenario(null)
+      setDuration(0)
+      updateStatus('error', error.message || 'Failed to load scenario')
+    } finally {
+      setScenarioLoading(false)
     }
   }
 
   // Fetch telemetry frame at specific time
-  const fetchTelemetryFrame = async (time) => {
+  const fetchTelemetryFrame = async (time, { showLoader = false, stopOnError = false } = {}) => {
+    if (showLoader) setTelemetryLoading(true)
+
     try {
       const response = await fetch(`/api/telemetry/frame?time=${time}`)
-      if (!response.ok) {
-        throw new Error('Failed to fetch telemetry')
+      let data
+      try {
+        data = await response.json()
+      } catch (parseError) {
+        throw new Error('Telemetry response was not valid JSON')
       }
 
-      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data?.detail || 'Failed to fetch telemetry')
+      }
+
       setTelemetryData(data)
 
       // Update drone trails
@@ -72,15 +131,23 @@ function App() {
             alt: drone.alt_msl,
             time: data.time
           })
-          // Keep last 500 positions
-          if (newTrails[drone.id].length > 500) {
+          // Keep last 2000 positions
+          if (newTrails[drone.id].length > 2000) {
             newTrails[drone.id].shift()
           }
         })
         return newTrails
       })
+
+      return data
     } catch (error) {
       console.error('Error fetching telemetry:', error)
+      updateStatus('error', error.message || 'Telemetry fetch failed')
+      if (stopOnError) {
+        setIsPlaying(false)
+      }
+    } finally {
+      if (showLoader) setTelemetryLoading(false)
     }
   }
 
@@ -128,6 +195,11 @@ function App() {
 
   // Toggle layer visibility
   const toggleLayer = (layerName) => {
+    if (layerName === 'googleTiles' && !googleApiKey) {
+      updateStatus('info', 'Set VITE_GOOGLE_MAPS_API_KEY to enable Google 3D Tiles')
+      return
+    }
+
     setLayers((prev) => ({
       ...prev,
       [layerName]: !prev[layerName]
@@ -143,7 +215,7 @@ function App() {
 
       <div className="app-main">
         <div className="left-panel">
-          <LayerToggles layers={layers} onToggle={toggleLayer} />
+          <LayerToggles layers={layers} onToggle={toggleLayer} hasGoogleKey={hasGoogleKey} />
         </div>
 
         <div className="viewer-container">
@@ -151,9 +223,13 @@ function App() {
             scenario={scenario}
             telemetryData={telemetryData}
             droneTrails={droneTrails}
-            currentTime={currentTime}
             layers={layers}
             onDroneSelect={setSelectedDrone}
+            isLoading={telemetryLoading || scenarioLoading}
+            statusMessage={scenarioStatus}
+            facilityCells={facilityCells}
+            onStatus={handleViewerStatus}
+            googleApiKey={googleApiKey}
           />
         </div>
 
