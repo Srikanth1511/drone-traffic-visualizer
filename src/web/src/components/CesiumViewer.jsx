@@ -11,7 +11,8 @@ import {
   GoogleMaps,
   createGooglePhotorealistic3DTileset,
   Rectangle,
-  HeightReference
+  HeightReference,
+  NearFarScalar
 } from 'cesium'
 import 'cesium/Build/Cesium/Widgets/widgets.css'
 import './CesiumViewer.css'
@@ -289,7 +290,8 @@ const CesiumViewer = ({
           outline: true,
           outlineColor: Color.WHITE,
           outlineWidth: 3,
-          heightReference: HeightReference.RELATIVE_TO_GROUND
+          heightReference: HeightReference.RELATIVE_TO_GROUND,
+          scaleByDistance: new NearFarScalar(100, 1.5, 5000, 0.5)
         }
       }
 
