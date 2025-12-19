@@ -24,26 +24,23 @@ const CesiumViewer = ({
   isLoading,
   statusMessage,
   facilityCells,
-  onStatus
+  onStatus,
+  googleApiKey
 }) => {
   const viewerRef = useRef(null)
   const cesiumContainerRef = useRef(null)
   const [selectedDroneId, setSelectedDroneId] = useState(null)
   const entitiesRef = useRef({})
-  const corridorProgressRef = useRef({})
   const googleTilesetRef = useRef(null)
   const facilityEntitiesRef = useRef([])
+  const trailEntitiesRef = useRef({})
+  const recentTrailEntitiesRef = useRef({})
 
   // Initialize Cesium Viewer
   useEffect(() => {
     if (!cesiumContainerRef.current || viewerRef.current) return
 
     // Set Google Maps API key if available
-    const googleApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
-    if (googleApiKey) {
-      GoogleMaps.defaultApiKey = googleApiKey
-    }
-
     const viewer = new Viewer(cesiumContainerRef.current, {
       timeline: false,
       animation: false,
@@ -75,6 +72,13 @@ const CesiumViewer = ({
     }
   }, [onDroneSelect])
 
+  useEffect(() => {
+    const apiKey = googleApiKey || import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+    if (apiKey) {
+      GoogleMaps.defaultApiKey = apiKey
+    }
+  }, [googleApiKey])
+
   // Fly to scenario location
   useEffect(() => {
     if (scenario && viewerRef.current) {
@@ -97,7 +101,7 @@ const CesiumViewer = ({
     if (!viewerRef.current) return
 
     const viewer = viewerRef.current
-    const googleApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+    const apiKey = googleApiKey || import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 
     const addTiles = async () => {
       if (googleTilesetRef.current) {
@@ -106,6 +110,11 @@ const CesiumViewer = ({
       }
 
       try {
+        if (!apiKey) {
+          onStatus?.('error', 'Google 3D Tiles need VITE_GOOGLE_MAPS_API_KEY in src/web/.env.local (Map Tiles API + billing)')
+          return
+        }
+
         const tileset = await createGooglePhotorealistic3DTileset()
         viewer.scene.primitives.add(tileset)
         googleTilesetRef.current = tileset
@@ -126,13 +135,13 @@ const CesiumViewer = ({
       }
     }
 
-    if (layers.googleTiles && googleApiKey) {
+    if (layers.googleTiles && apiKey) {
       addTiles()
     } else if (googleTilesetRef.current) {
       // Hide Google 3D Tiles
       googleTilesetRef.current.show = false
     }
-  }, [layers.googleTiles])
+  }, [layers.googleTiles, googleApiKey, onStatus])
 
   // Render facility map overlays
   useEffect(() => {
@@ -234,50 +243,62 @@ const CesiumViewer = ({
 
   // Render drones
   useEffect(() => {
-    if (!telemetryData || !viewerRef.current) return
+    if (!viewerRef.current) return
 
     const viewer = viewerRef.current
     const entities = viewer.entities
+    const modelUri = import.meta.env.VITE_DRONE_MODEL_URL
+    const activeIds = new Set()
 
-    // Remove old drone entities
-    Object.keys(entitiesRef.current).forEach((key) => {
-      if (key.startsWith('drone_')) {
-        entities.remove(entitiesRef.current[key])
-        delete entitiesRef.current[key]
-      }
-    })
+    if (layers.drones && telemetryData?.drones) {
+      telemetryData.drones.forEach((drone) => {
+        const entityId = `drone_${drone.id}`
+        const position = Cartesian3.fromDegrees(drone.lon, drone.lat, drone.alt_msl)
+        const heading = CesiumMath.toRadians(drone.heading)
+        const hpr = new HeadingPitchRoll(heading, 0, 0)
+        const orientation = Transforms.headingPitchRollQuaternion(position, hpr)
 
-    if (!layers.drones) return
+        let color = Color.LIME
+        if (drone.health === 'WARNING') color = Color.YELLOW
+        if (drone.health === 'ERROR') color = Color.RED
+        if (drone.health === 'OFFLINE') color = Color.GRAY
 
-    // Add new drone entities
-    telemetryData.drones.forEach((drone) => {
-      const position = Cartesian3.fromDegrees(drone.lon, drone.lat, drone.alt_msl)
+        const isSelected = drone.id === selectedDroneId
+        let entity = entitiesRef.current[entityId] || entities.getById(entityId)
 
-      const heading = CesiumMath.toRadians(drone.heading)
-      const hpr = new HeadingPitchRoll(heading, 0, 0)
-      const orientation = Transforms.headingPitchRollQuaternion(position, hpr)
+        if (!entity) {
+          entity = entities.add({ id: entityId })
+        }
 
-      let color = Color.LIME
-      if (drone.health === 'WARNING') color = Color.YELLOW
-      if (drone.health === 'ERROR') color = Color.RED
-      if (drone.health === 'OFFLINE') color = Color.GRAY
+        entity.name = drone.id
+        entity.position = position
+        entity.orientation = orientation
+        entity.droneData = drone
 
-      const isSelected = drone.id === selectedDroneId
+        if (modelUri) {
+          entity.model = {
+            uri: modelUri,
+            minimumPixelSize: 30,
+            maximumScale: 150,
+            scale: 1,
+            color: color.withAlpha(isSelected ? 1 : 0.95),
+            silhouetteSize: isSelected ? 2 : 1,
+            silhouetteColor: isSelected ? Color.WHITE : color.withAlpha(0.4)
+          }
+          entity.box = undefined
+          entity.ellipsoid = undefined
+        } else {
+          entity.model = undefined
+          entity.box = undefined
+          entity.ellipsoid = {
+            radii: isSelected ? new Cartesian3(6, 6, 2.8) : new Cartesian3(5, 5, 2.2),
+            material: color.withAlpha(0.9),
+            outline: true,
+            outlineColor: Color.WHITE.withAlpha(isSelected ? 0.85 : 0.45)
+          }
+        }
 
-      const entity = entities.add({
-        id: `drone_${drone.id}`,
-        name: drone.id,
-        position: position,
-        orientation: orientation,
-        droneData: drone,
-        box: {
-          dimensions: isSelected ? new Cartesian3(10, 10, 3) : new Cartesian3(8, 8, 2.5),
-          material: color,
-          outline: true,
-          outlineColor: isSelected ? Color.WHITE : Color.BLACK.withAlpha(0.5),
-          outlineWidth: isSelected ? 2 : 1
-        },
-        label: isSelected ? {
+        entity.label = isSelected ? {
           text: drone.id,
           font: '12px sans-serif',
           fillColor: Color.WHITE,
@@ -286,60 +307,118 @@ const CesiumViewer = ({
           style: 1,
           pixelOffset: new Cartesian2(0, -20),
           show: true
-        } : undefined,
-        polyline: isSelected ? {
+        } : undefined
+
+        entity.polyline = isSelected ? {
           positions: [position, Cartesian3.fromDegrees(drone.lon, drone.lat, 0)],
           width: 1,
           material: Color.WHITE.withAlpha(0.5)
         } : undefined
-      })
 
-      entitiesRef.current[`drone_${drone.id}`] = entity
+        entitiesRef.current[entityId] = entity
+        activeIds.add(entityId)
+      })
+    }
+
+    // Remove drones that are no longer present or when the layer is disabled
+    Object.keys(entitiesRef.current).forEach((key) => {
+      if (key.startsWith('drone_') && (!layers.drones || !activeIds.has(key))) {
+        if (entitiesRef.current[key]) {
+          entities.remove(entitiesRef.current[key])
+        }
+        delete entitiesRef.current[key]
+      }
     })
   }, [telemetryData, layers.drones, selectedDroneId])
 
   // Render drone trails
   useEffect(() => {
-    if (!droneTrails || !viewerRef.current || !layers.trails) return
+    if (!viewerRef.current) return
 
     const viewer = viewerRef.current
     const entities = viewer.entities
+    const activeTrailIds = new Set()
+    const activeRecentIds = new Set()
 
-    // Remove old trail entities
-    Object.keys(entitiesRef.current).forEach((key) => {
-      if (key.startsWith('trail_')) {
-        entities.remove(entitiesRef.current[key])
-        delete entitiesRef.current[key]
-      }
-    })
+    if (layers.trails && droneTrails) {
+      Object.entries(droneTrails).forEach(([droneId, trail]) => {
+        if (trail.length < 2) return
 
-    if (!layers.trails) return
+        const trailPositions = Cartesian3.fromDegreesArrayHeights(
+          trail.flatMap((pos) => [pos.lon, pos.lat, pos.alt])
+        )
 
-    // Add trail polylines for each drone
-    Object.entries(droneTrails).forEach(([droneId, trail]) => {
-      if (trail.length < 2) return
+        const trailId = `trail_${droneId}`
+        let trailEntity = trailEntitiesRef.current[trailId] || entities.getById(trailId)
 
-      const positions = trail.map((pos) =>
-        Cartesian3.fromDegrees(pos.lon, pos.lat, pos.alt)
-      )
+        if (!trailEntity) {
+          trailEntity = entities.add({
+            id: trailId,
+            name: `${droneId} Trail`,
+            polyline: {
+              positions: trailPositions,
+              width: 4,
+              material: Color.TEAL.withAlpha(0.7),
+              clampToGround: false
+            }
+          })
+        } else {
+          trailEntity.polyline.positions = trailPositions
+        }
 
-      // Trail color: teal/green for completed path
-      const trailColor = Color.TEAL
+        trailEntitiesRef.current[trailId] = trailEntity
+        activeTrailIds.add(trailId)
 
-      const entity = entities.add({
-        id: `trail_${droneId}`,
-        name: `${droneId} Trail`,
-        polyline: {
-          positions: positions,
-          width: 4,
-          material: trailColor.withAlpha(0.7),
-          clampToGround: false
+        // Recent breadcrumb (last ~5s)
+        const cutoff = telemetryData?.time ? telemetryData.time - 5 : null
+        const recentPoints = cutoff !== null ? trail.filter((p) => p.time >= cutoff) : []
+
+        if (recentPoints.length > 1) {
+          const recentId = `trail_recent_${droneId}`
+          const recentPositions = Cartesian3.fromDegreesArrayHeights(
+            recentPoints.flatMap((pos) => [pos.lon, pos.lat, pos.alt])
+          )
+
+          let recentEntity = recentTrailEntitiesRef.current[recentId] || entities.getById(recentId)
+          if (!recentEntity) {
+            recentEntity = entities.add({
+              id: recentId,
+              name: `${droneId} Breadcrumb`,
+              polyline: {
+                positions: recentPositions,
+                width: 6,
+                material: new PolylineOutlineMaterialProperty({
+                  color: Color.CHARTREUSE.withAlpha(0.9),
+                  outlineColor: Color.WHITE.withAlpha(0.6),
+                  outlineWidth: 2
+                }),
+                clampToGround: false
+              }
+            })
+          } else {
+            recentEntity.polyline.positions = recentPositions
+          }
+
+          recentTrailEntitiesRef.current[recentId] = recentEntity
+          activeRecentIds.add(recentId)
         }
       })
+    }
 
-      entitiesRef.current[`trail_${droneId}`] = entity
-    })
-  }, [droneTrails, layers.trails])
+    const cleanupMap = (store, activeSet) => {
+      Object.keys(store).forEach((id) => {
+        if (!layers.trails || !activeSet.has(id)) {
+          if (store[id]) {
+            entities.remove(store[id])
+          }
+          delete store[id]
+        }
+      })
+    }
+
+    cleanupMap(trailEntitiesRef.current, activeTrailIds)
+    cleanupMap(recentTrailEntitiesRef.current, activeRecentIds)
+  }, [droneTrails, layers.trails, telemetryData])
 
   const droneCount = telemetryData?.drones?.length ?? 0
   const timeLabel = telemetryData?.time !== undefined ? `${telemetryData.time.toFixed(1)}s` : '—'

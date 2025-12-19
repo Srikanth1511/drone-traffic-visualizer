@@ -129,7 +129,7 @@ function App() {
             alt: drone.alt_msl,
             time: data.time
           })
-          if (newTrails[drone.id].length > 500) {
+          if (newTrails[drone.id].length > 2000) {
             newTrails[drone.id].shift()
           }
         })
@@ -221,39 +221,41 @@ function App() {
 
   return (
     <div className="app">
-      <div className="app-header">
-        <div className="header-title">
-          <div className="eyebrow">Live Ops Console</div>
-          <h1>Drone Traffic Visualizer</h1>
-          <p className="subhead">Monitor corridors, telemetry, and airspace limits in one place.</p>
-        </div>
-        <div className="header-actions">
-          <ScenarioSelector onLoadScenario={loadScenario} loading={scenarioLoading} />
-        </div>
+      <div className="viewer-container">
+        <CesiumViewer
+          scenario={scenario}
+          telemetryData={telemetryData}
+          droneTrails={droneTrails}
+          layers={layers}
+          onDroneSelect={setSelectedDrone}
+          isLoading={telemetryLoading || scenarioLoading}
+          statusMessage={scenarioStatus}
+          facilityCells={facilityCells}
+          onStatus={handleViewerStatus}
+          googleApiKey={googleApiKey}
+        />
       </div>
 
-      <div className={`status-banner ${scenarioStatus.type}`}>
-        <div className="status-dot" />
-        <div className="status-text">{scenarioStatus.text}</div>
-      </div>
-
-      <div className="app-main">
-        <div className="viewer-container">
-          <CesiumViewer
-            scenario={scenario}
-            telemetryData={telemetryData}
-            droneTrails={droneTrails}
-            layers={layers}
-            onDroneSelect={setSelectedDrone}
-            isLoading={telemetryLoading || scenarioLoading}
-            statusMessage={scenarioStatus}
-            facilityCells={facilityCells}
-            onStatus={handleViewerStatus}
-          />
+      <div className="ui-overlay">
+        <div className="top-bar">
+          <div className="header-title">
+            <div className="eyebrow">Live Ops Console</div>
+            <div className="title-row">
+              <h1>Drone Traffic Visualizer</h1>
+              <div className={`status-chip ${scenarioStatus.type}`}>
+                <span className="status-dot" />
+                {scenarioStatus.text}
+              </div>
+            </div>
+            <p className="subhead">Map-first view with quick access controls pinned to the side.</p>
+          </div>
+          <div className="header-actions">
+            <ScenarioSelector onLoadScenario={loadScenario} loading={scenarioLoading} />
+          </div>
         </div>
 
-        <div className="panel-layer">
-          <div className="floating-panel">
+        <div className="side-dock">
+          <div className="panel-stack">
             <div className="panel-card">
               <div className="card-header">
                 <div>
@@ -284,30 +286,27 @@ function App() {
               </div>
             </div>
 
-            <LayerToggles layers={layers} onToggle={toggleLayer} />
+            <LayerToggles layers={layers} onToggle={toggleLayer} hasGoogleKey={Boolean(googleApiKey)} />
+            <PlaybackControls
+              currentTime={currentTime}
+              duration={duration}
+              isPlaying={isPlaying}
+              playbackSpeed={playbackSpeed}
+              onTimeChange={handleTimeChange}
+              onPlayPause={handlePlayPause}
+              onReset={handleReset}
+              onSpeedChange={handleSpeedChange}
+              onStepBackward={() => stepPlayback(-2)}
+              onStepForward={() => stepPlayback(2)}
+              isLoading={telemetryLoading || scenarioLoading}
+              isReady={isReady}
+            />
           </div>
 
-          <div className="floating-panel right">
+          <div className="panel-stack narrow">
             <DroneInspector drone={selectedDrone} />
           </div>
         </div>
-      </div>
-
-      <div className="app-footer">
-        <PlaybackControls
-          currentTime={currentTime}
-          duration={duration}
-          isPlaying={isPlaying}
-          playbackSpeed={playbackSpeed}
-          onTimeChange={handleTimeChange}
-          onPlayPause={handlePlayPause}
-          onReset={handleReset}
-          onSpeedChange={handleSpeedChange}
-          onStepBackward={() => stepPlayback(-2)}
-          onStepForward={() => stepPlayback(2)}
-          isLoading={telemetryLoading || scenarioLoading}
-          isReady={isReady}
-        />
       </div>
     </div>
   )
