@@ -79,7 +79,7 @@ const CesiumViewer = ({
   // Fly to scenario location
   useEffect(() => {
     if (scenario && viewerRef.current) {
-      const { originLat, originLon } = scenario.scenario
+      const { originLat, originLon } = scenario
 
       viewerRef.current.camera.flyTo({
         destination: Cartesian3.fromDegrees(originLon, originLat, 1500),
