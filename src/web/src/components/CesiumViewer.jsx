@@ -205,33 +205,35 @@ const CesiumViewer = ({
       if (corridor.type === 'parallel') baseColor = Color.SKYBLUE
       if (corridor.type === 'switching') baseColor = Color.MAGENTA
 
-      // Full planned path (dimmer, shows complete route)
+      // Full planned path (white lines showing complete mission/route)
       const plannedEntity = entities.add({
         id: `corridor_planned_${corridor.id}`,
-        name: `${corridor.id} (Planned)`,
+        name: `${corridor.id} (Planned Mission)`,
         polyline: {
           positions: positions,
-          width: 5,
-          material: baseColor.withAlpha(0.3),
-          clampToGround: false
+          width: 3,
+          material: Color.WHITE.withAlpha(0.5),
+          clampToGround: true,
+          arcType: ArcType.NONE
         }
       })
 
       entitiesRef.current[`corridor_planned_${corridor.id}`] = plannedEntity
 
-      // Active path (brighter, will show completed portions)
+      // Active path (colored, shows drone progress)
       const activeEntity = entities.add({
         id: `corridor_${corridor.id}`,
-        name: corridor.id,
+        name: `${corridor.id} (Active)`,
         polyline: {
           positions: positions,
-          width: 6,
+          width: 5,
           material: new PolylineOutlineMaterialProperty({
-            color: baseColor.withAlpha(0.8),
-            outlineWidth: 2,
-            outlineColor: Color.WHITE.withAlpha(0.5)
+            color: baseColor.withAlpha(0.7),
+            outlineWidth: 1,
+            outlineColor: Color.WHITE.withAlpha(0.3)
           }),
-          clampToGround: false
+          clampToGround: true,
+          arcType: ArcType.NONE
         }
       })
 
@@ -241,27 +243,31 @@ const CesiumViewer = ({
 
   // Render drones
   useEffect(() => {
-    if (!telemetryData || !viewerRef.current) return
+    if (!viewerRef.current) return
 
     const viewer = viewerRef.current
     const entities = viewer.entities
+    const modelUri = import.meta.env.VITE_DRONE_MODEL_URL
+    const activeIds = new Set()
 
-    // Remove old drone entities
-    Object.keys(entitiesRef.current).forEach((key) => {
-      if (key.startsWith('drone_')) {
-        entities.remove(entitiesRef.current[key])
-        delete entitiesRef.current[key]
-      }
-    })
+    if (!layers.drones || !telemetryData?.drones) {
+      // Hide all drones when layer is off
+      Object.keys(entitiesRef.current).forEach((key) => {
+        if (key.startsWith('drone_')) {
+          const entity = entitiesRef.current[key]
+          if (entity) entity.show = false
+        }
+      })
+      return
+    }
 
-    if (!layers.drones) return
-
-    // Add new drone entities
+    // Update or create drone entities (prevents flickering)
     telemetryData.drones.forEach((drone) => {
-      // Use AGL (above ground level) for proper positioning with 3D terrain
+      const entityId = `drone_${drone.id}`
       const position = Cartesian3.fromDegrees(drone.lon, drone.lat, drone.alt_agl)
 
-      const heading = CesiumMath.toRadians(drone.heading)
+      // Rotate 90 degrees so front faces forward (not side)
+      const heading = CesiumMath.toRadians(drone.heading + 90)
       const hpr = new HeadingPitchRoll(heading, 0, 0)
       const orientation = Transforms.headingPitchRollQuaternion(position, hpr)
 
@@ -272,40 +278,71 @@ const CesiumViewer = ({
 
       const isSelected = drone.id === selectedDroneId
 
-      const entity = entities.add({
-        id: `drone_${drone.id}`,
-        name: drone.id,
-        position: position,
-        orientation: orientation,
-        droneData: drone,
-        box: {
+      let entity = entitiesRef.current[entityId]
+
+      // Update existing entity or create new one
+      if (!entity) {
+        entity = entities.add({ id: entityId })
+        entitiesRef.current[entityId] = entity
+      }
+
+      // Update entity properties
+      entity.name = drone.id
+      entity.position = position
+      entity.orientation = orientation
+      entity.droneData = drone
+      entity.show = true
+
+      // Use custom model if available, otherwise use box
+      if (modelUri) {
+        entity.model = {
+          uri: modelUri,
+          minimumPixelSize: isSelected ? 80 : 60,
+          maximumScale: 200,
+          scale: 1.0,
+          heightReference: HeightReference.RELATIVE_TO_GROUND
+        }
+        entity.box = undefined
+      } else {
+        entity.model = undefined
+        entity.box = {
           dimensions: isSelected ? new Cartesian3(10, 10, 3) : new Cartesian3(8, 8, 2.5),
           material: color,
           outline: true,
           outlineColor: isSelected ? Color.WHITE : Color.BLACK.withAlpha(0.5),
           outlineWidth: isSelected ? 2 : 1,
           heightReference: HeightReference.RELATIVE_TO_GROUND
-        },
-        label: isSelected ? {
-          text: drone.id,
-          font: '12px sans-serif',
-          fillColor: Color.WHITE,
-          outlineColor: Color.BLACK,
-          outlineWidth: 2,
-          style: 1,
-          pixelOffset: new Cartesian2(0, -20),
-          show: true,
-          heightReference: HeightReference.RELATIVE_TO_GROUND
-        } : undefined,
-        polyline: isSelected ? {
-          positions: [position, Cartesian3.fromDegrees(drone.lon, drone.lat, 0)],
-          width: 1,
-          material: Color.WHITE.withAlpha(0.5),
-          clampToGround: true
-        } : undefined
-      })
+        }
+      }
 
-      entitiesRef.current[`drone_${drone.id}`] = entity
+      entity.label = isSelected ? {
+        text: drone.id,
+        font: '12px sans-serif',
+        fillColor: Color.WHITE,
+        outlineColor: Color.BLACK,
+        outlineWidth: 2,
+        style: 1,
+        pixelOffset: new Cartesian2(0, -20),
+        show: true,
+        heightReference: HeightReference.RELATIVE_TO_GROUND
+      } : undefined
+
+      entity.polyline = isSelected ? {
+        positions: [position, Cartesian3.fromDegrees(drone.lon, drone.lat, 0)],
+        width: 1,
+        material: Color.WHITE.withAlpha(0.5),
+        clampToGround: true
+      } : undefined
+
+      activeIds.add(entityId)
+    })
+
+    // Hide drones no longer in telemetry
+    Object.keys(entitiesRef.current).forEach((key) => {
+      if (key.startsWith('drone_') && !activeIds.has(key)) {
+        const entity = entitiesRef.current[key]
+        if (entity) entity.show = false
+      }
     })
   }, [telemetryData, layers.drones, selectedDroneId])
 
