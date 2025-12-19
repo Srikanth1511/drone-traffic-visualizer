@@ -10,9 +10,7 @@ import {
   Cartesian2,
   GoogleMaps,
   createGooglePhotorealistic3DTileset,
-  Rectangle,
-  ScreenSpaceEventHandler,
-  ScreenSpaceEventType
+  Rectangle
 } from 'cesium'
 import 'cesium/Build/Cesium/Widgets/widgets.css'
 import './CesiumViewer.css'
