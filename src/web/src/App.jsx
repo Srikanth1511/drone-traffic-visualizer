@@ -243,25 +243,6 @@ function App() {
       <div className="app-body">
         <aside className="sidebar">
           <LayerToggles layers={layers} onToggle={toggleLayer} hasGoogleKey={Boolean(googleApiKey)} />
-          <PlaybackControls
-            currentTime={currentTime}
-            duration={duration}
-            isPlaying={isPlaying}
-            playbackSpeed={playbackSpeed}
-            onTimeChange={handleTimeChange}
-            onPlayPause={handlePlayPause}
-            onReset={handleReset}
-            onSpeedChange={handleSpeedChange}
-            onStepBackward={() => stepPlayback(-2)}
-            onStepForward={() => stepPlayback(2)}
-            isLoading={telemetryLoading || scenarioLoading}
-            isReady={isReady}
-          />
-          <div className="status-textual">
-            <div>Drones: {telemetryData?.drones?.length ?? 0}</div>
-            <div>Time: {telemetryData?.time?.toFixed ? `${telemetryData.time.toFixed(1)}s` : '—'}</div>
-            <div>Status: {scenarioStatus.text}</div>
-          </div>
         </aside>
 
         <main className="viewer-shell">
@@ -285,6 +266,28 @@ function App() {
           <DroneInspector drone={selectedDrone} />
         </aside>
       </div>
+
+      <footer className="playback-bar">
+        <PlaybackControls
+          currentTime={currentTime}
+          duration={duration}
+          isPlaying={isPlaying}
+          playbackSpeed={playbackSpeed}
+          onTimeChange={handleTimeChange}
+          onPlayPause={handlePlayPause}
+          onReset={handleReset}
+          onSpeedChange={handleSpeedChange}
+          onStepBackward={() => stepPlayback(-2)}
+          onStepForward={() => stepPlayback(2)}
+          isLoading={telemetryLoading || scenarioLoading}
+          isReady={isReady}
+        />
+        <div className="playback-status">
+          <span>Drones: {telemetryData?.drones?.length ?? 0}</span>
+          <span>Time: {telemetryData?.time?.toFixed ? `${telemetryData.time.toFixed(1)}s` : '—'}</span>
+          <span>{scenarioStatus.text}</span>
+        </div>
+      </footer>
     </div>
   )
 }

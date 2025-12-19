@@ -460,13 +460,12 @@ const CesiumViewer = ({
         <div className="status-bar">
           <div className="status-pill">Drones: {droneCount}</div>
           <div className="status-pill">Time: {timeLabel}</div>
-          <div className="status-pill secondary">{scenario ? scenario.name : 'No scenario loaded'}</div>
           {statusMessage?.text && (
             <div className={`status-pill badge ${statusMessage.type}`}>
               {statusMessage.text}
             </div>
           )}
-          {isLoading && <div className="status-pill badge loading">Loading telemetry…</div>}
+          {isLoading && <div className="status-pill badge loading">Loading…</div>}
         </div>
       </div>
 
