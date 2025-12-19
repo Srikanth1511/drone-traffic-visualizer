@@ -89,34 +89,16 @@
 }
 
 .app-main {
-  display: flex;
+  position: relative;
   flex: 1;
   overflow: hidden;
 }
 
-.left-panel {
-  width: 280px;
-  background: rgba(8, 12, 16, 0.92);
-  border-right: 1px solid #12202b;
-  padding: 18px 16px;
-  overflow-y: auto;
-  backdrop-filter: blur(4px);
-}
-
 .viewer-container {
-  flex: 1;
-  position: relative;
+  position: absolute;
+  inset: 0;
   background: radial-gradient(circle at 20% 20%, rgba(58, 98, 133, 0.08), transparent 30%),
     linear-gradient(180deg, #070d14 0%, #050a10 100%);
-}
-
-.right-panel {
-  width: 320px;
-  background: rgba(8, 12, 16, 0.92);
-  border-left: 1px solid #12202b;
-  padding: 18px 16px;
-  overflow-y: auto;
-  backdrop-filter: blur(4px);
 }
 
 .app-footer {
@@ -124,6 +106,28 @@
   border-top: 1px solid #12202b;
   padding: 14px 20px;
   z-index: 1000;
+}
+
+.panel-layer {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.floating-panel {
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: all;
+}
+
+.floating-panel.right {
+  align-items: flex-end;
 }
 
 .panel-card {
@@ -188,17 +192,21 @@
     flex-direction: column;
   }
 
-  .left-panel,
-  .right-panel {
-    width: 100%;
-    order: 2;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  .panel-layer {
+    position: static;
+    flex-direction: column;
     gap: 12px;
+    padding: 12px;
+  }
+
+  .floating-panel,
+  .floating-panel.right {
+    width: 100%;
+    align-items: stretch;
   }
 
   .viewer-container {
-    order: 1;
+    position: relative;
     height: 60vh;
   }
 }

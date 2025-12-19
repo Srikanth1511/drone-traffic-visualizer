@@ -9,7 +9,8 @@ import {
   Math as CesiumMath,
   Cartesian2,
   GoogleMaps,
-  createGooglePhotorealistic3DTileset
+  createGooglePhotorealistic3DTileset,
+  Rectangle
 } from 'cesium'
 import 'cesium/Build/Cesium/Widgets/widgets.css'
 import './CesiumViewer.css'
@@ -21,7 +22,8 @@ const CesiumViewer = ({
   layers,
   onDroneSelect,
   isLoading,
-  statusMessage
+  statusMessage,
+  facilityCells
 }) => {
   const viewerRef = useRef(null)
   const cesiumContainerRef = useRef(null)
@@ -29,6 +31,7 @@ const CesiumViewer = ({
   const entitiesRef = useRef({})
   const corridorProgressRef = useRef({})
   const googleTilesetRef = useRef(null)
+  const facilityEntitiesRef = useRef([])
 
   // Initialize Cesium Viewer
   useEffect(() => {
@@ -114,6 +117,43 @@ const CesiumViewer = ({
       googleTilesetRef.current.show = false
     }
   }, [layers.googleTiles])
+
+  // Render facility map overlays
+  useEffect(() => {
+    if (!viewerRef.current) return
+
+    const viewer = viewerRef.current
+    const entities = viewer.entities
+
+    facilityEntitiesRef.current.forEach((entity) => entities.remove(entity))
+    facilityEntitiesRef.current = []
+
+    if (!layers.facilityMap || !facilityCells?.length) return
+
+    facilityCells.forEach((cell) => {
+      const rectangle = Rectangle.fromDegrees(
+        cell.lonMin,
+        cell.latMin,
+        cell.lonMax,
+        cell.latMax
+      )
+
+      const entity = entities.add({
+        id: `facility_${cell.lonMin}_${cell.latMin}`,
+        name: 'Facility ceiling',
+        rectangle: {
+          coordinates: rectangle,
+          material: Color.fromBytes(255, 193, 7, 90),
+          outline: true,
+          outlineColor: Color.fromBytes(255, 193, 7, 150),
+          outlineWidth: 1
+        },
+        description: `Ceiling: ${cell.maxAltitudeAgl}m AGL`
+      })
+
+      facilityEntitiesRef.current.push(entity)
+    })
+  }, [facilityCells, layers.facilityMap])
 
   // Render corridors with full path visibility
   useEffect(() => {

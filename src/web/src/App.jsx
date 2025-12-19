@@ -20,6 +20,7 @@ function App() {
   const [telemetryLoading, setTelemetryLoading] = useState(false)
   const [selectedDrone, setSelectedDrone] = useState(null)
   const [droneTrails, setDroneTrails] = useState({})
+  const [facilityCells, setFacilityCells] = useState([])
   const [layers, setLayers] = useState({
     drones: true,
     corridors: true,
@@ -28,6 +29,7 @@ function App() {
     googleTiles: false
   })
   const [lastUpdated, setLastUpdated] = useState(null)
+  const googleApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 
   const isReady = useMemo(() => Boolean(scenario && duration > 0), [scenario, duration])
   const scenarioName = scenario?.name || scenario?.metadata?.name || 'Scenario'
@@ -70,6 +72,19 @@ function App() {
       setDuration(payload.scenario.duration || 0)
       setCurrentTime(0)
       updateStatus('success', `Loaded ${scenarioConfig.name || 'scenario'} successfully.`)
+
+      try {
+        const facilityResponse = await fetch('/api/airspace/facility-map')
+        if (facilityResponse.ok) {
+          const facilityPayload = await facilityResponse.json()
+          setFacilityCells(facilityPayload?.cells || [])
+        } else {
+          setFacilityCells([])
+        }
+      } catch (facilityError) {
+        console.warn('Unable to load facility map grid', facilityError)
+        setFacilityCells([])
+      }
 
       await fetchTelemetryFrame(0, { showLoader: true, stopOnError: true })
     } catch (error) {
@@ -192,6 +207,11 @@ function App() {
   }
 
   const toggleLayer = (layerName) => {
+    if (layerName === 'googleTiles' && !googleApiKey) {
+      updateStatus('info', 'Set VITE_GOOGLE_MAPS_API_KEY to enable Google 3D Tiles')
+      return
+    }
+
     setLayers((prev) => ({
       ...prev,
       [layerName]: !prev[layerName]
@@ -217,55 +237,57 @@ function App() {
       </div>
 
       <div className="app-main">
-        <div className="left-panel">
-          <div className="panel-card">
-            <div className="card-header">
-              <div>
-                <div className="eyebrow">Session</div>
-                <h3>{scenario ? scenarioName : 'No scenario loaded'}</h3>
-              </div>
-              <div className={`pill ${isPlaying ? 'success' : 'muted'}`}>
-                {isPlaying ? 'Playing' : 'Idle'}
-              </div>
-            </div>
-            <div className="card-grid">
-              <div>
-                <div className="label">Playback</div>
-                <div className="value">{duration ? `${currentTime.toFixed(1)} / ${duration.toFixed(1)}s` : '—'}</div>
-              </div>
-              <div>
-                <div className="label">Speed</div>
-                <div className="value">{playbackSpeed}x</div>
-              </div>
-              <div>
-                <div className="label">Drones</div>
-                <div className="value">{telemetryData?.drones?.length ?? 0}</div>
-              </div>
-              <div>
-                <div className="label">Last update</div>
-                <div className="value">{lastUpdated ? lastUpdated.toLocaleTimeString() : '—'}</div>
-              </div>
-            </div>
-          </div>
-
-          <LayerToggles layers={layers} onToggle={toggleLayer} />
-        </div>
-
         <div className="viewer-container">
           <CesiumViewer
             scenario={scenario}
             telemetryData={telemetryData}
             droneTrails={droneTrails}
-            currentTime={currentTime}
             layers={layers}
             onDroneSelect={setSelectedDrone}
             isLoading={telemetryLoading || scenarioLoading}
             statusMessage={scenarioStatus}
+            facilityCells={facilityCells}
           />
         </div>
 
-        <div className="right-panel">
-          <DroneInspector drone={selectedDrone} />
+        <div className="panel-layer">
+          <div className="floating-panel">
+            <div className="panel-card">
+              <div className="card-header">
+                <div>
+                  <div className="eyebrow">Session</div>
+                  <h3>{scenario ? scenarioName : 'No scenario loaded'}</h3>
+                </div>
+                <div className={`pill ${isPlaying ? 'success' : 'muted'}`}>
+                  {isPlaying ? 'Playing' : 'Idle'}
+                </div>
+              </div>
+              <div className="card-grid">
+                <div>
+                  <div className="label">Playback</div>
+                  <div className="value">{duration ? `${currentTime.toFixed(1)} / ${duration.toFixed(1)}s` : '—'}</div>
+                </div>
+                <div>
+                  <div className="label">Speed</div>
+                  <div className="value">{playbackSpeed}x</div>
+                </div>
+                <div>
+                  <div className="label">Drones</div>
+                  <div className="value">{telemetryData?.drones?.length ?? 0}</div>
+                </div>
+                <div>
+                  <div className="label">Last update</div>
+                  <div className="value">{lastUpdated ? lastUpdated.toLocaleTimeString() : '—'}</div>
+                </div>
+              </div>
+            </div>
+
+            <LayerToggles layers={layers} onToggle={toggleLayer} />
+          </div>
+
+          <div className="floating-panel right">
+            <DroneInspector drone={selectedDrone} />
+          </div>
         </div>
       </div>
 
