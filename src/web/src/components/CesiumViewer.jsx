@@ -23,7 +23,8 @@ const CesiumViewer = ({
   onDroneSelect,
   isLoading,
   statusMessage,
-  facilityCells
+  facilityCells,
+  onStatus
 }) => {
   const viewerRef = useRef(null)
   const cesiumContainerRef = useRef(null)
@@ -98,20 +99,35 @@ const CesiumViewer = ({
     const viewer = viewerRef.current
     const googleApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 
-    if (layers.googleTiles && googleApiKey) {
-      // Add Google 3D Tiles if not already added
-      if (!googleTilesetRef.current) {
-        try {
-          const tileset = createGooglePhotorealistic3DTileset()
-          viewer.scene.primitives.add(tileset)
-          googleTilesetRef.current = tileset
-        } catch (error) {
-          console.error('Error loading Google 3D Tiles:', error)
-        }
-      } else {
-        // Show existing tileset
+    const addTiles = async () => {
+      if (googleTilesetRef.current) {
         googleTilesetRef.current.show = true
+        return
       }
+
+      try {
+        const tileset = await createGooglePhotorealistic3DTileset()
+        viewer.scene.primitives.add(tileset)
+        googleTilesetRef.current = tileset
+
+        if (tileset.readyPromise) {
+          tileset.readyPromise
+            .then(() => onStatus?.('success', 'Google 3D Tiles loaded'))
+            .catch((err) => {
+              console.error('Google 3D Tiles failed to become ready', err)
+              onStatus?.('error', 'Google 3D Tiles failed to load. Check API key and billing.')
+              googleTilesetRef.current = null
+            })
+        }
+      } catch (error) {
+        console.error('Error loading Google 3D Tiles:', error)
+        onStatus?.('error', 'Google 3D Tiles failed to load. Check API key and billing.')
+        googleTilesetRef.current = null
+      }
+    }
+
+    if (layers.googleTiles && googleApiKey) {
+      addTiles()
     } else if (googleTilesetRef.current) {
       // Hide Google 3D Tiles
       googleTilesetRef.current.show = false

@@ -35,6 +35,7 @@ function App() {
   const scenarioName = scenario?.name || scenario?.metadata?.name || 'Scenario'
 
   const updateStatus = (type, text) => setScenarioStatus({ type, text })
+  const handleViewerStatus = (type, text) => setScenarioStatus({ type, text })
 
   const loadScenario = async (scenarioConfig) => {
     setScenarioLoading(true)
@@ -247,6 +248,7 @@ function App() {
             isLoading={telemetryLoading || scenarioLoading}
             statusMessage={scenarioStatus}
             facilityCells={facilityCells}
+            onStatus={handleViewerStatus}
           />
         </div>
 
