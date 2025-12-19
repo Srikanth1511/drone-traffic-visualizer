@@ -11,8 +11,7 @@ import {
   GoogleMaps,
   createGooglePhotorealistic3DTileset,
   Rectangle,
-  HeightReference,
-  ArcType
+  HeightReference
 } from 'cesium'
 import 'cesium/Build/Cesium/Widgets/widgets.css'
 import './CesiumViewer.css'
@@ -213,8 +212,7 @@ const CesiumViewer = ({
           positions: positions,
           width: 3,
           material: Color.WHITE.withAlpha(0.5),
-          clampToGround: true,
-          arcType: ArcType.NONE
+          clampToGround: true
         }
       })
 
@@ -232,8 +230,7 @@ const CesiumViewer = ({
             outlineWidth: 1,
             outlineColor: Color.WHITE.withAlpha(0.3)
           }),
-          clampToGround: true,
-          arcType: ArcType.NONE
+          clampToGround: true
         }
       })
 
@@ -381,8 +378,7 @@ const CesiumViewer = ({
           positions: positions,
           width: 4,
           material: trailColor.withAlpha(0.7),
-          clampToGround: true,
-          arcType: ArcType.NONE
+          clampToGround: true
         }
       })
 
