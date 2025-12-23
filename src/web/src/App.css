@@ -58,6 +58,94 @@
   z-index: 1000;
 }
 
+/* Mode Switcher */
+.mode-switcher {
+  display: flex;
+  gap: 10px;
+  margin: 0 20px;
+}
+
+.mode-btn {
+  padding: 8px 16px;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  color: #aaa;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.mode-btn:hover {
+  background: #333;
+  border-color: #555;
+}
+
+.mode-btn.active {
+  background: #4CAF50;
+  color: #fff;
+  border-color: #4CAF50;
+}
+
+/* Live Controls */
+.live-controls {
+  display: flex;
+  gap: 10px;
+}
+
+.connect-btn,
+.disconnect-btn {
+  padding: 8px 16px;
+  background: #4CAF50;
+  border: none;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.disconnect-btn {
+  background: #f44336;
+}
+
+.connect-btn:hover {
+  background: #45a049;
+}
+
+.disconnect-btn:hover {
+  background: #da190b;
+}
+
+/* Live Footer */
+.live-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 30px;
+  padding: 5px 0;
+}
+
+.live-indicator {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.live-indicator.connected {
+  color: #4CAF50;
+}
+
+.live-indicator.disconnected {
+  color: #f44336;
+}
+
+.live-info {
+  color: #aaa;
+  font-size: 14px;
+}
+
 /* Responsive design */
 @media (max-width: 1024px) {
   .left-panel,
@@ -81,5 +169,14 @@
 
   .right-panel.open {
     transform: translateX(0);
+  }
+
+  .mode-switcher {
+    margin: 0 10px;
+  }
+
+  .mode-btn {
+    padding: 6px 12px;
+    font-size: 12px;
   }
 }

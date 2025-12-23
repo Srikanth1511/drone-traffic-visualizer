@@ -7,13 +7,16 @@ Provides REST API endpoints for telemetry data, scenarios, and airspace info.
 from pathlib import Path
 from typing import Optional, Dict, Any
 from contextlib import asynccontextmanager
+import asyncio
+import json
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from src.adapters.playback import PlaybackAdapter
+from src.adapters.live import LiveTelemetryAdapter
 from src.services.altitude_service import AltitudeService
 
 
@@ -21,11 +24,15 @@ from src.services.altitude_service import AltitudeService
 class AppState:
     """Application state container."""
     playback_adapter: Optional[PlaybackAdapter] = None
+    live_adapter: Optional[LiveTelemetryAdapter] = None
     altitude_service: Optional[AltitudeService] = None
     current_scenario: Optional[Dict[str, Any]] = None
+    # WebSocket connections for broadcasting live telemetry
+    active_connections: list[WebSocket] = []
 
 
 state = AppState()
+state.active_connections = []  # Initialize list
 
 
 @asynccontextmanager
@@ -33,9 +40,11 @@ async def lifespan(app: FastAPI):
     """Application lifespan manager."""
     # Startup: Initialize default services
     state.altitude_service = AltitudeService()
+    state.live_adapter = LiveTelemetryAdapter()
     yield
     # Shutdown: Cleanup resources
     state.playback_adapter = None
+    state.live_adapter = None
     state.altitude_service = None
 
 
@@ -253,6 +262,197 @@ async def check_altitude_violation(
     result = state.altitude_service.check_altitude_violation(lat, lon, alt_agl)
 
     return result
+
+
+# ============================================================================
+# LIVE TELEMETRY ENDPOINTS
+# ============================================================================
+
+class DroneRegistrationRequest(BaseModel):
+    """Request model for drone registration."""
+    drone_id: str
+    metadata: Optional[Dict[str, Any]] = None
+
+
+@app.post("/api/drones/register")
+async def register_drone(request: DroneRegistrationRequest):
+    """
+    Register a new drone for live tracking.
+
+    Args:
+        drone_id: Unique identifier for the drone
+        metadata: Optional metadata about the drone
+
+    Returns:
+        Registration confirmation
+    """
+    if not state.live_adapter:
+        raise HTTPException(status_code=500, detail="Live telemetry adapter not initialized")
+
+    result = state.live_adapter.register_drone(request.drone_id, request.metadata)
+    return result
+
+
+class TelemetryUpdateRequest(BaseModel):
+    """Request model for telemetry update."""
+    id: str
+    lat: float
+    lon: float
+    alt_msl: Optional[float] = 0.0
+    alt_agl: Optional[float] = 0.0
+    heading: Optional[float] = 0.0
+    speed: Optional[float] = 0.0
+    health: Optional[str] = "OK"
+    link_quality: Optional[float] = 1.0
+    vertical_speed: Optional[float] = 0.0
+    corridor_id: Optional[str] = None
+    route_index: Optional[int] = None
+    payload: Optional[Dict[str, Any]] = None
+
+
+@app.post("/api/telemetry/live/update")
+async def update_live_telemetry(request: TelemetryUpdateRequest):
+    """
+    Update live telemetry for a drone (HTTP POST).
+
+    This is an alternative to WebSocket for simpler integration.
+
+    Args:
+        Telemetry data matching DroneState schema
+
+    Returns:
+        Updated drone state
+    """
+    if not state.live_adapter:
+        raise HTTPException(status_code=500, detail="Live telemetry adapter not initialized")
+
+    try:
+        # Update drone state
+        drone = state.live_adapter.update_drone(request.dict())
+
+        # Broadcast to connected WebSocket clients
+        if state.active_connections:
+            frame = state.live_adapter.get_current_frame()
+            message = json.dumps({
+                "type": "telemetry_update",
+                "data": frame.to_dict()
+            })
+            # Send to all connected clients
+            for connection in state.active_connections:
+                try:
+                    await connection.send_text(message)
+                except Exception:
+                    # Remove broken connections
+                    state.active_connections.remove(connection)
+
+        return drone.to_dict()
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/telemetry/live/current")
+async def get_live_telemetry():
+    """
+    Get current live telemetry frame.
+
+    Returns:
+        Current TelemetryFrame with all active drones
+    """
+    if not state.live_adapter:
+        raise HTTPException(status_code=500, detail="Live telemetry adapter not initialized")
+
+    frame = state.live_adapter.get_current_frame()
+    return frame.to_dict()
+
+
+@app.delete("/api/drones/{drone_id}")
+async def unregister_drone(drone_id: str):
+    """
+    Unregister a drone from live tracking.
+
+    Args:
+        drone_id: Drone identifier
+
+    Returns:
+        Success status
+    """
+    if not state.live_adapter:
+        raise HTTPException(status_code=500, detail="Live telemetry adapter not initialized")
+
+    removed = state.live_adapter.remove_drone(drone_id)
+
+    if not removed:
+        raise HTTPException(status_code=404, detail="Drone not found")
+
+    return {"success": True, "drone_id": drone_id}
+
+
+@app.websocket("/ws/telemetry/live")
+async def websocket_live_telemetry(websocket: WebSocket):
+    """
+    WebSocket endpoint for real-time telemetry streaming.
+
+    Clients can:
+    1. Send telemetry updates: {"type": "update", "data": {...}}
+    2. Register drones: {"type": "register", "drone_id": "...", "metadata": {...}}
+    3. Receive broadcasts: {"type": "telemetry_update", "data": {...}}
+
+    The connection will receive broadcasts whenever any drone updates its telemetry.
+    """
+    await websocket.accept()
+    state.active_connections.append(websocket)
+
+    try:
+        while True:
+            # Wait for incoming messages
+            data = await websocket.receive_text()
+            message = json.loads(data)
+
+            msg_type = message.get("type")
+
+            if msg_type == "register":
+                # Register drone
+                drone_id = message.get("drone_id")
+                metadata = message.get("metadata")
+                result = state.live_adapter.register_drone(drone_id, metadata)
+                await websocket.send_text(json.dumps({
+                    "type": "register_response",
+                    "data": result
+                }))
+
+            elif msg_type == "update":
+                # Update telemetry
+                telemetry_data = message.get("data")
+                drone = state.live_adapter.update_drone(telemetry_data)
+
+                # Broadcast to all clients
+                frame = state.live_adapter.get_current_frame()
+                broadcast_msg = json.dumps({
+                    "type": "telemetry_update",
+                    "data": frame.to_dict()
+                })
+
+                for connection in state.active_connections:
+                    try:
+                        await connection.send_text(broadcast_msg)
+                    except Exception:
+                        # Remove broken connections
+                        if connection in state.active_connections:
+                            state.active_connections.remove(connection)
+
+            elif msg_type == "ping":
+                # Respond to ping
+                await websocket.send_text(json.dumps({"type": "pong"}))
+
+    except WebSocketDisconnect:
+        # Remove from active connections
+        if websocket in state.active_connections:
+            state.active_connections.remove(websocket)
+    except Exception as e:
+        print(f"WebSocket error: {e}")
+        if websocket in state.active_connections:
+            state.active_connections.remove(websocket)
 
 
 if __name__ == "__main__":

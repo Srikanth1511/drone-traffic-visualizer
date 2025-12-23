@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import CesiumViewer from './components/CesiumViewer'
 import PlaybackControls from './components/PlaybackControls'
 import DroneInspector from './components/DroneInspector'
@@ -7,8 +7,9 @@ import LayerToggles from './components/LayerToggles'
 import './App.css'
 
 function App() {
+  const [mode, setMode] = useState('playback') // 'playback' or 'live'
   const [scenario, setScenario] = useState(null)
-  const [scenarioStatus, setScenarioStatus] = useState({ type: 'info', text: 'Load a scenario to begin.' })
+  const [scenarioStatus, setScenarioStatus] = useState({ type: 'info', text: 'Load a scenario or switch to live mode.' })
   const [scenarioLoading, setScenarioLoading] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
@@ -26,6 +27,10 @@ function App() {
     trails: true, // Enable trails by default
     googleTiles: false // Google 3D tiles disabled by default (requires API key)
   })
+
+  // WebSocket for live mode
+  const wsRef = useRef(null)
+  const [wsConnected, setWsConnected] = useState(false)
 
   // Check if Google Maps API key is available
   const googleApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
@@ -206,11 +211,174 @@ function App() {
     }))
   }
 
+  // ============================================================================
+  // LIVE MODE FUNCTIONALITY
+  // ============================================================================
+
+  // Connect to WebSocket for live telemetry
+  const connectLiveMode = () => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      updateStatus('info', 'Already connected to live telemetry')
+      return
+    }
+
+    try {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+      const wsUrl = `${protocol}//${window.location.hostname}:8000/ws/telemetry/live`
+
+      updateStatus('info', 'Connecting to live telemetry...')
+      const ws = new WebSocket(wsUrl)
+
+      ws.onopen = () => {
+        console.log('WebSocket connected')
+        setWsConnected(true)
+        updateStatus('success', 'Connected to live telemetry stream')
+
+        // Create a default scenario for live mode
+        setScenario({
+          name: 'Live Telemetry',
+          originLat: 33.7736, // Default to Atlanta
+          originLon: -84.4022,
+          corridors: []
+        })
+        setIsPlaying(false)
+        setDroneTrails({})
+      }
+
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data)
+
+          if (message.type === 'telemetry_update') {
+            const data = message.data
+            setTelemetryData(data)
+
+            // Update drone trails
+            setDroneTrails((prevTrails) => {
+              const newTrails = { ...prevTrails }
+              data.drones.forEach((drone) => {
+                if (!newTrails[drone.id]) {
+                  newTrails[drone.id] = []
+                }
+                newTrails[drone.id].push({
+                  lat: drone.lat,
+                  lon: drone.lon,
+                  alt: drone.alt_agl,
+                  time: data.time
+                })
+                // Keep last 300 positions
+                if (newTrails[drone.id].length > 300) {
+                  newTrails[drone.id].shift()
+                }
+              })
+              return newTrails
+            })
+          }
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error)
+        }
+      }
+
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error)
+        updateStatus('error', 'WebSocket connection error')
+        setWsConnected(false)
+      }
+
+      ws.onclose = () => {
+        console.log('WebSocket disconnected')
+        setWsConnected(false)
+        updateStatus('info', 'Disconnected from live telemetry')
+      }
+
+      wsRef.current = ws
+    } catch (error) {
+      console.error('Failed to connect WebSocket:', error)
+      updateStatus('error', 'Failed to connect to live telemetry')
+    }
+  }
+
+  // Disconnect from live mode
+  const disconnectLiveMode = () => {
+    if (wsRef.current) {
+      wsRef.current.close()
+      wsRef.current = null
+      setWsConnected(false)
+      setTelemetryData(null)
+      setDroneTrails({})
+      updateStatus('info', 'Disconnected from live mode')
+    }
+  }
+
+  // Switch between playback and live mode
+  const switchMode = (newMode) => {
+    if (newMode === mode) return
+
+    if (newMode === 'live') {
+      // Switching to live mode
+      setIsPlaying(false)
+      setScenario(null)
+      setDroneTrails({})
+      setSelectedDrone(null)
+      setMode('live')
+      connectLiveMode()
+    } else {
+      // Switching to playback mode
+      disconnectLiveMode()
+      setMode('playback')
+      setScenario(null)
+      setTelemetryData(null)
+      updateStatus('info', 'Load a scenario to begin.')
+    }
+  }
+
+  // Cleanup WebSocket on unmount
+  useEffect(() => {
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close()
+      }
+    }
+  }, [])
+
   return (
     <div className="app">
       <div className="app-header">
         <h1>Drone Traffic Visualizer</h1>
-        <ScenarioSelector onLoadScenario={loadScenario} />
+
+        {/* Mode Switcher */}
+        <div className="mode-switcher">
+          <button
+            className={`mode-btn ${mode === 'playback' ? 'active' : ''}`}
+            onClick={() => switchMode('playback')}
+          >
+            Playback
+          </button>
+          <button
+            className={`mode-btn ${mode === 'live' ? 'active' : ''}`}
+            onClick={() => switchMode('live')}
+          >
+            Live {wsConnected && '●'}
+          </button>
+        </div>
+
+        {/* Scenario selector (only in playback mode) */}
+        {mode === 'playback' && <ScenarioSelector onLoadScenario={loadScenario} />}
+
+        {/* Live mode controls */}
+        {mode === 'live' && (
+          <div className="live-controls">
+            {wsConnected ? (
+              <button className="disconnect-btn" onClick={disconnectLiveMode}>
+                Disconnect
+              </button>
+            ) : (
+              <button className="connect-btn" onClick={connectLiveMode}>
+                Reconnect
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="app-main">
@@ -239,16 +407,31 @@ function App() {
       </div>
 
       <div className="app-footer">
-        <PlaybackControls
-          currentTime={currentTime}
-          duration={duration}
-          isPlaying={isPlaying}
-          playbackSpeed={playbackSpeed}
-          onTimeChange={handleTimeChange}
-          onPlayPause={handlePlayPause}
-          onReset={handleReset}
-          onSpeedChange={setPlaybackSpeed}
-        />
+        {/* Only show playback controls in playback mode */}
+        {mode === 'playback' && (
+          <PlaybackControls
+            currentTime={currentTime}
+            duration={duration}
+            isPlaying={isPlaying}
+            playbackSpeed={playbackSpeed}
+            onTimeChange={handleTimeChange}
+            onPlayPause={handlePlayPause}
+            onReset={handleReset}
+            onSpeedChange={setPlaybackSpeed}
+          />
+        )}
+
+        {/* Live mode indicator */}
+        {mode === 'live' && (
+          <div className="live-footer">
+            <span className={`live-indicator ${wsConnected ? 'connected' : 'disconnected'}`}>
+              {wsConnected ? '● Live' : '○ Disconnected'}
+            </span>
+            <span className="live-info">
+              {telemetryData ? `${telemetryData.drones?.length || 0} drone(s) active` : 'Waiting for telemetry...'}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   )
