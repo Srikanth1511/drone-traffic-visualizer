@@ -271,32 +271,145 @@ class MainActivity : AppCompatActivity() {
 }
 ```
 
-### 4. Video Streaming (Optional)
+### 4. Video Streaming (SIMPLE - JPEG Frames)
 
-For live video streaming, add VideoStreamService:
+The backend accepts **JPEG frames** for simplicity. DJI SDK provides H.264, so we decode to JPEG first.
 
+**VideoStreamService.kt:**
 ```kotlin
-class VideoStreamService(private val backendUrl: String) {
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.ImageFormat
+import android.graphics.Rect
+import android.graphics.YuvImage
+import dji.sdk.codec.DJICodecManager
+import okhttp3.*
+import java.io.ByteArrayOutputStream
+import java.io.IOException
+
+class VideoStreamService(
+    private val backendUrl: String,
+    private val droneId: String
+) {
+    private val client = OkHttpClient()
+    private var codecManager: DJICodecManager? = null
+    private var lastFrameTime = 0L
+    private val frameInterval = 100L // Send frame every 100ms (10 FPS)
+
+    fun initialize() {
+        // Initialize DJI codec for H.264 decoding
+        codecManager = DJICodecManager(
+            context,
+            null,
+            0,
+            0,
+            DJICodecManager.VideoStreamSource.CAMERA
+        )
+    }
+
     fun startVideoStream() {
+        // Get video feed from DJI
         DJISDKManager.getInstance().videoFeeder?.primaryVideoFeed?.addVideoDataListener {
             videoBuffer, size ->
-            // H.264 encoded video data
-            // Forward to backend or use WebRTC
 
-            // Option 1: Send to backend for recording
-            sendVideoChunk(videoBuffer, size)
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - lastFrameTime < frameInterval) {
+                return@addVideoDataListener // Skip frame (rate limiting)
+            }
+            lastFrameTime = currentTime
 
-            // Option 2: Display locally
-            // codecManager.sendDataToDecoder(videoBuffer, size)
+            // Decode H.264 to YUV, then convert to JPEG
+            codecManager?.sendDataToDecoder(videoBuffer, size)
+        }
+
+        // Get decoded frames
+        codecManager?.setYuvDataCallback { yuvData, width, height ->
+            // Convert YUV to JPEG
+            val jpeg = yuvToJpeg(yuvData, width, height)
+
+            // Send to backend
+            sendFrame(jpeg)
         }
     }
 
-    private fun sendVideoChunk(data: ByteArray, size: Int) {
-        // Implementation depends on your backend video handling
-        // Can use HTTP chunks, WebRTC, or RTMP
+    private fun yuvToJpeg(yuvData: ByteArray, width: Int, height: Int): ByteArray {
+        val yuvImage = YuvImage(yuvData, ImageFormat.NV21, width, height, null)
+        val outputStream = ByteArrayOutputStream()
+        yuvImage.compressToJpeg(Rect(0, 0, width, height), 80, outputStream)
+        return outputStream.toByteArray()
+    }
+
+    private fun sendFrame(jpegData: ByteArray) {
+        val requestBody = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart(
+                "frame",
+                "frame.jpg",
+                RequestBody.create(MediaType.parse("image/jpeg"), jpegData)
+            )
+            .build()
+
+        val request = Request.Builder()
+            .url("$backendUrl/api/video/$droneId/frame")
+            .post(requestBody)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onResponse(call: Call, response: Response) {
+                // Frame uploaded successfully
+            }
+
+            override fun onFailure(call: Call, e: IOException) {
+                // Handle error (could implement retry logic)
+            }
+        })
+    }
+
+    fun stopVideoStream() {
+        codecManager?.cleanSurface()
+        codecManager?.destroyCodec()
     }
 }
 ```
+
+**Usage in MainActivity:**
+```kotlin
+class MainActivity : AppCompatActivity() {
+    private lateinit var videoService: VideoStreamService
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        // Initialize video streaming
+        videoService = VideoStreamService(
+            Config.BACKEND_URL,
+            "dji_mini3_001"
+        )
+        videoService.initialize()
+        videoService.startVideoStream()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        videoService.stopVideoStream()
+    }
+}
+```
+
+**Backend Endpoints Used:**
+- `POST /api/video/{drone_id}/frame` - Upload JPEG frame
+- `GET /api/video/{drone_id}/frame` - Get latest frame
+- `GET /api/video/{drone_id}/stream.mjpeg` - MJPEG stream for browser
+
+**Frontend Display:**
+```html
+<!-- In your visualizer frontend -->
+<img src="http://YOUR_BACKEND:8000/api/video/dji_mini3_001/stream.mjpeg"
+     alt="Live Video"
+     style="width: 640px; height: 480px;" />
+```
+
+**Simple! No WebRTC, no RTMP, just JPEG frames over HTTP.**
 
 ---
 

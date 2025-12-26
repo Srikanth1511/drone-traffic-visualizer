@@ -29,10 +29,13 @@ class AppState:
     current_scenario: Optional[Dict[str, Any]] = None
     # WebSocket connections for broadcasting live telemetry
     active_connections: list[WebSocket] = []
+    # Video frame storage: {drone_id: latest_frame_bytes}
+    video_frames: Dict[str, bytes] = {}
 
 
 state = AppState()
 state.active_connections = []  # Initialize list
+state.video_frames = {}  # Initialize video storage
 
 
 @asynccontextmanager
@@ -453,6 +456,104 @@ async def websocket_live_telemetry(websocket: WebSocket):
         print(f"WebSocket error: {e}")
         if websocket in state.active_connections:
             state.active_connections.remove(websocket)
+
+
+# ============================================================================
+# VIDEO STREAMING ENDPOINTS
+# ============================================================================
+
+from fastapi import File, UploadFile, Form
+from fastapi.responses import StreamingResponse, Response
+import io
+
+@app.post("/api/video/{drone_id}/frame")
+async def upload_video_frame(drone_id: str, frame: UploadFile = File(...)):
+    """
+    Upload a single video frame (JPEG or H.264 chunk).
+
+    The latest frame is stored in memory and can be retrieved
+    via GET /api/video/{drone_id}/frame
+
+    Args:
+        drone_id: Unique drone identifier
+        frame: Video frame as JPEG or H.264 encoded data
+
+    Returns:
+        Success status
+    """
+    try:
+        # Read frame data
+        frame_data = await frame.read()
+
+        # Store latest frame for this drone
+        state.video_frames[drone_id] = frame_data
+
+        return {
+            "success": True,
+            "drone_id": drone_id,
+            "frame_size": len(frame_data)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/video/{drone_id}/frame")
+async def get_video_frame(drone_id: str):
+    """
+    Get the latest video frame for a drone.
+
+    Returns the most recently uploaded frame as JPEG image.
+
+    Args:
+        drone_id: Unique drone identifier
+
+    Returns:
+        JPEG image
+    """
+    if drone_id not in state.video_frames:
+        raise HTTPException(status_code=404, detail="No video frame available for this drone")
+
+    frame_data = state.video_frames[drone_id]
+
+    return Response(
+        content=frame_data,
+        media_type="image/jpeg",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
+
+
+@app.get("/api/video/{drone_id}/stream.mjpeg")
+async def stream_video_mjpeg(drone_id: str):
+    """
+    Stream video as Motion JPEG (MJPEG).
+
+    Continuously sends the latest frame for display in browser.
+    Simple but works everywhere.
+
+    Args:
+        drone_id: Unique drone identifier
+
+    Returns:
+        MJPEG stream
+    """
+    async def generate():
+        while True:
+            if drone_id in state.video_frames:
+                frame = state.video_frames[drone_id]
+
+                yield (b'--frame\r\n'
+                       b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+
+            await asyncio.sleep(0.1)  # ~10 FPS
+
+    return StreamingResponse(
+        generate(),
+        media_type="multipart/x-mixed-replace; boundary=frame"
+    )
 
 
 if __name__ == "__main__":
