@@ -1,7 +1,7 @@
 """
 Live telemetry adapter for real-time drone data.
 
-Receives live telemetry from external sources (phone apps, ESP32, MAVLink, etc.)
+Receives live telemetry from external sources (DJI drones, MAVLink, custom systems, etc.)
 and converts to the unified telemetry schema.
 """
 

@@ -4,7 +4,7 @@ This document describes the real-time telemetry API for streaming drone data to 
 
 ## Overview
 
-The Live Telemetry API allows external sources (phone apps, ESP32 devices, MAVLink adapters, etc.) to send real-time drone telemetry data to the visualization system via HTTP or WebSocket.
+The Live Telemetry API allows external sources (DJI drones, MAVLink adapters, custom telemetry systems, etc.) to send real-time drone telemetry data to the visualization system via HTTP or WebSocket.
 
 ## Base URL
 
@@ -30,10 +30,10 @@ Register a new drone for tracking.
 **Request Body:**
 ```json
 {
-  "drone_id": "phone_001",
+  "drone_id": "dji_mini3_001",
   "metadata": {
-    "type": "phone",
-    "model": "Samsung Galaxy S23",
+    "type": "dji",
+    "model": "Mini 3",
     "operator": "John Doe"
   }
 }
@@ -42,7 +42,7 @@ Register a new drone for tracking.
 **Response:**
 ```json
 {
-  "drone_id": "phone_001",
+  "drone_id": "dji_mini3_001",
   "registered_at": "2025-01-15T10:30:00.000Z",
   "status": "registered"
 }
@@ -59,7 +59,7 @@ Send telemetry update via HTTP POST (alternative to WebSocket).
 **Request Body:**
 ```json
 {
-  "id": "phone_001",
+  "id": "dji_mini3_001",
   "lat": 33.7736,
   "lon": -84.4022,
   "alt_msl": 350.0,
@@ -81,7 +81,7 @@ Send telemetry update via HTTP POST (alternative to WebSocket).
 **Response:**
 ```json
 {
-  "id": "phone_001",
+  "id": "dji_mini3_001",
   "lat": 33.7736,
   "lon": -84.4022,
   "alt_msl": 350.0,
@@ -115,7 +115,7 @@ Retrieve the current state of all active drones.
   "time": 123.45,
   "drones": [
     {
-      "id": "phone_001",
+      "id": "dji_mini3_001",
       "lat": 33.7736,
       "lon": -84.4022,
       "alt_msl": 350.0,
@@ -149,7 +149,7 @@ Remove a drone from tracking.
 ```json
 {
   "success": true,
-  "drone_id": "phone_001"
+  "drone_id": "dji_mini3_001"
 }
 ```
 
@@ -169,9 +169,9 @@ Connect to the WebSocket endpoint for bidirectional real-time telemetry.
 ```json
 {
   "type": "register",
-  "drone_id": "phone_001",
+  "drone_id": "dji_mini3_001",
   "metadata": {
-    "type": "phone",
+    "type": "dji",
     "model": "Samsung Galaxy S23"
   }
 }
@@ -182,7 +182,7 @@ Connect to the WebSocket endpoint for bidirectional real-time telemetry.
 {
   "type": "update",
   "data": {
-    "id": "phone_001",
+    "id": "dji_mini3_001",
     "lat": 33.7736,
     "lon": -84.4022,
     "alt_msl": 350.0,
@@ -214,7 +214,7 @@ Connect to the WebSocket endpoint for bidirectional real-time telemetry.
 {
   "type": "register_response",
   "data": {
-    "drone_id": "phone_001",
+    "drone_id": "dji_mini3_001",
     "registered_at": "2025-01-15T10:30:00.000Z",
     "status": "registered"
   }
@@ -229,7 +229,7 @@ Connect to the WebSocket endpoint for bidirectional real-time telemetry.
     "time": 123.45,
     "drones": [
       {
-        "id": "phone_001",
+        "id": "dji_mini3_001",
         "lat": 33.7736,
         "lon": -84.4022,
         "alt_msl": 350.0,
@@ -304,8 +304,8 @@ ws.onopen = () => {
   // Register drone
   ws.send(JSON.stringify({
     type: 'register',
-    drone_id: 'phone_001',
-    metadata: { type: 'phone' }
+    drone_id: 'dji_mini3_001',
+    metadata: { type: 'dji' }
   }))
 
   // Start sending telemetry
@@ -313,7 +313,7 @@ ws.onopen = () => {
     ws.send(JSON.stringify({
       type: 'update',
       data: {
-        id: 'phone_001',
+        id: 'dji_mini3_001',
         lat: 33.7736,
         lon: -84.4022,
         alt_msl: 350.0,

@@ -124,15 +124,15 @@ DRONE_ID=drone_002 python3 examples/test_live_telemetry.py
 
 Or modify the script to send multiple drones from one script.
 
-## Integration with Phone App
+## Integration with Real Drones
 
-The phone app will use the same API endpoints demonstrated here:
+Real drones (DJI, MAVLink, etc.) will use the same API endpoints demonstrated here:
 
 - **Register:** `POST /api/drones/register`
 - **Update:** `POST /api/telemetry/live/update` or WebSocket
 - **Disconnect:** `DELETE /api/drones/{drone_id}`
 
-See [../docs/LIVE_TELEMETRY_API.md](../docs/LIVE_TELEMETRY_API.md) for complete API documentation.
+See [../docs/LIVE_TELEMETRY_API.md](../docs/LIVE_TELEMETRY_API.md) and [../docs/DJI_INTEGRATION.md](../docs/DJI_INTEGRATION.md) for complete documentation.
 
 ## Troubleshooting
 
@@ -175,10 +175,9 @@ python3 -m uvicorn src.server.app:app --reload --port 8000
 
 ## Next Steps
 
-1. **Phone App Integration:** Use these examples as reference for implementing telemetry streaming from the phone app
-2. **ESP32 Integration:** Adapt HTTP example for microcontroller use
-3. **MAVLink Integration:** Wrap MAVLink messages in the same telemetry format
-4. **Custom Adapters:** Create adapters for other drone platforms
+1. **DJI Integration:** See [../docs/DJI_INTEGRATION.md](../docs/DJI_INTEGRATION.md) for connecting DJI drones
+2. **MAVLink Integration:** Wrap MAVLink messages in the same telemetry format
+3. **Custom Adapters:** Create adapters for other drone platforms
 
 ## References
 
