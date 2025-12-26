@@ -47,7 +47,7 @@ class LiveTelemetryAdapter:
             health = DroneHealth.OK
 
         # Parse payload
-        payload_data = data.get('payload', {})
+        payload_data = data.get('payload') or {}
         payload = CameraPayload(
             camera_streams=payload_data.get('cameraStreams', payload_data.get('camera_streams', [])),
             gimbal_yaw=payload_data.get('gimbalYaw', payload_data.get('gimbal_yaw', 0.0)),
